@@ -94,7 +94,16 @@
     <button type="button" class="gta-pill" id="gtaMenu" data-tap="Slash">?</button>
     <button type="button" class="gta-pill" id="gtaFullscreen">⛶</button>
     <button type="button" class="gta-pill" id="gtaPivot" title="Low-speed pivot in vehicles">Pivot</button>
+    <button type="button" class="gta-pill" id="gtaTune" title="Tune controls">Tune</button>
     <div id="gtaWeapons"></div>
+    <div id="gtaTunePanel" class="gta-panel" hidden>
+      <div class="gta-panel-title">Tune controls</div>
+      <div class="gta-tune-rows"></div>
+      <div class="gta-panel-actions">
+        <button type="button" class="gta-pill gta-pill--danger gta-tune-reset">Reset defaults</button>
+        <button type="button" class="gta-pill gta-pill--primary gta-tune-close">Close</button>
+      </div>
+    </div>
   `;
   const rotate = document.createElement('div');
   rotate.id = 'gtaRotate';
@@ -114,8 +123,9 @@
   // touch-callout) covers most of it; the rest needs non-passive listeners.
   // Form controls inside the game's <dialog>s are left alone so the options
   // panel still works.
+  // Our scrollable panels are exempt too, so native pan-y scrolling works inside them.
   const isFormControl = (t) =>
-    !!t && !!t.closest && !!t.closest('input, textarea, select, label, a, dialog');
+    !!t && !!t.closest && !!t.closest('input, textarea, select, label, a, dialog, .gta-panel, #gtaLoadMenu');
   const isGameSurface = (t) =>
     !!t && !!t.closest && (t.tagName === 'CANVAS' || !!t.closest('#gtaMobile'));
 
@@ -221,19 +231,38 @@
   // frame: it reads the current heading from window.game and presses ←/→
   // until the character/car faces the right way, while holding ↑ (or ↓).
   //
-  // Distance from the center picks the speed (tune these):
-  const RING_MOVE = 20; // px: beyond this → move
-  const RING_RUN = 110; // px: beyond this → run (Shift); on foot only
+  // ---------- Tunables (editable from the "Tune" panel, persisted) ----------
+  // Distance from the center picks the speed; reverse is decided by *where the
+  // stick points relative to the current facing*, never by distance: if the
+  // requested direction is behind you, go backwards toward it instead of
+  // U-turning (hysteresis keeps it from flickering when sideways). Holding the
+  // finger inside the centre ring (vehicles only) pulls the handbrake.
+  const TUNE_KEY = 'gtajs-mobile:tune';
+  const TUNE_DEFS = [
+    { k: 'ringMove', label: 'Stick · move ring (px)', def: 20, step: 2, min: 6, max: 60 },
+    { k: 'ringRun', label: 'Stick · run ring (px)', def: 110, step: 5, min: 40, max: 130 },
+    { k: 'turnStart', label: 'Turn · start (°)', def: 8, step: 1, min: 1, max: 30 },
+    { k: 'turnStop', label: 'Turn · stop (°)', def: 3, step: 1, min: 0, max: 20 },
+    { k: 'revEnter', label: 'Reverse · enter (°)', def: 130, step: 5, min: 90, max: 180 },
+    { k: 'revExit', label: 'Reverse · exit (°)', def: 100, step: 5, min: 60, max: 180 },
+    { k: 'hbRadius', label: 'Handbrake · centre radius (px)', def: 20, step: 2, min: 0, max: 60 },
+    { k: 'hbDelay', label: 'Handbrake · hold delay (ms)', def: 500, step: 100, min: 0, max: 2000 },
+    { k: 'pivotOn', label: 'Pivot · on below speed', def: 20, step: 5, min: 0, max: 100 },
+    { k: 'pivotOff', label: 'Pivot · off above speed', def: 35, step: 5, min: 0, max: 150 },
+    { k: 'pivotSens', label: 'Pivot · sensitivity ×', def: 1, step: 0.1, min: 0.1, max: 3 },
+  ];
+  const T = {};
+  function loadTune() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(TUNE_KEY) || '{}') || {}; } catch { saved = {}; }
+    for (const d of TUNE_DEFS) T[d.k] = typeof saved[d.k] === 'number' ? saved[d.k] : d.def;
+  }
+  function saveTune() {
+    try { localStorage.setItem(TUNE_KEY, JSON.stringify(T)); } catch { /* ignore */ }
+  }
+  loadTune();
   const KNOB_MAX = 130; // px: knob travel clamp (visual only)
-  const TURN_START = (8 * Math.PI) / 180; // start turning when off by more than this
-  const TURN_STOP = (3 * Math.PI) / 180; // stop turning once within this (hysteresis)
-  //
-  // Reverse is decided by *where the stick points relative to the current
-  // facing*, never by distance: if the requested direction is behind you, go
-  // backwards toward it instead of U-turning. Hysteresis keeps it from
-  // flickering when the stick is sideways.
-  const REV_ENTER = (130 * Math.PI) / 180; // |angle to travel dir| above this → reverse
-  const REV_EXIT = (100 * Math.PI) / 180; // … and below this → back to forward
+  const deg = (d) => (d * Math.PI) / 180;
   //
   // Engine conventions (verified empirically on the production build):
   //   heading r = sprite.rotation.z; forward in world = (sin r, -cos r)
@@ -253,7 +282,9 @@
     stickDist = 0;
   let turning = 0; // -1 = pressing ArrowRight, 0 = none, +1 = pressing ArrowLeft
   let reversing = false;
-  const held = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, ShiftLeft: false };
+  let centreSince = 0; // performance.now() when the finger entered the centre ring (0 = not there)
+  const MOVE_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft'];
+  const held = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, ShiftLeft: false, Space: false };
 
   function setHeld(code, on) {
     if (held[code] === on) return;
@@ -282,9 +313,20 @@
     const pl = g && g.player;
     if (stickId === null || !pl || root.hidden) return;
 
-    const gear = stickDist >= RING_RUN ? 2 : stickDist >= RING_MOVE ? 1 : 0;
+    // Handbrake: finger held inside the centre ring (vehicles only).
+    const inCentre = pl.inVehicle && stickDist < T.hbRadius;
+    if (inCentre) {
+      if (!centreSince) centreSince = performance.now();
+      setHeld('Space', performance.now() - centreSince >= T.hbDelay);
+    } else {
+      centreSince = 0;
+      setHeld('Space', false);
+    }
+    stick.dataset.hb = held.Space ? '1' : '0';
+
+    const gear = stickDist >= T.ringRun ? 2 : stickDist >= T.ringMove ? 1 : 0;
     if (gear === 0) {
-      for (const code of Object.keys(held)) setHeld(code, false);
+      for (const code of MOVE_KEYS) setHeld(code, false);
       turning = 0;
       reversing = false;
       return;
@@ -296,16 +338,16 @@
     const fwdDelta = Math.abs(wrapAngle(phi + Math.PI / 2 - heading));
     // Reverse exists only in vehicles; on foot you always turn and walk forward.
     if (!pl.inVehicle) reversing = false;
-    else if (!reversing && fwdDelta > REV_ENTER) reversing = true;
-    else if (reversing && fwdDelta < REV_EXIT) reversing = false;
+    else if (!reversing && fwdDelta > deg(T.revEnter)) reversing = true;
+    else if (reversing && fwdDelta < deg(T.revExit)) reversing = false;
 
     // Reverse: face away from the travel direction and back into it.
     const target = phi + Math.PI / 2 + (reversing ? Math.PI : 0);
     const delta = wrapAngle(target - heading);
     const mag = Math.abs(delta);
 
-    if (turning === 0 && mag > TURN_START) turning = delta > 0 ? 1 : -1;
-    else if (turning !== 0 && (mag < TURN_STOP || Math.sign(delta) !== turning)) turning = 0;
+    if (turning === 0 && mag > deg(T.turnStart)) turning = delta > 0 ? 1 : -1;
+    else if (turning !== 0 && (mag < deg(T.turnStop) || Math.sign(delta) !== turning)) turning = 0;
 
     const inv = steerInverted(pl) ? -1 : 1;
     setHeld('ArrowLeft', turning * inv === 1);
@@ -328,7 +370,7 @@
       dy = (dy / dist) * KNOB_MAX;
     }
     knob.style.transform = `translate(${dx}px, ${dy}px)`;
-    stick.dataset.gear = dist >= RING_RUN ? 'run' : dist >= RING_MOVE ? 'move' : 'idle';
+    stick.dataset.gear = dist >= T.ringRun ? 'run' : dist >= T.ringMove ? 'move' : 'idle';
   }
 
   function endStick() {
@@ -336,11 +378,29 @@
     stick.classList.remove('is-active');
     delete stick.dataset.gear;
     delete stick.dataset.mode;
+    delete stick.dataset.hb;
     knob.style.transform = '';
     turning = 0;
     reversing = false;
+    centreSince = 0;
     for (const code of Object.keys(held)) setHeld(code, false);
   }
+
+  // Ring sizes follow the tunables
+  function applyTuneVisuals() {
+    const move = root.querySelector('.gta-ring-move');
+    const run = root.querySelector('.gta-ring-run');
+    move.style.width = move.style.height = `${T.ringMove * 2}px`;
+    run.style.width = run.style.height = `${T.ringRun * 2}px`;
+    const a = root.querySelector('.gta-rev-line-a');
+    const b = root.querySelector('.gta-rev-line-b');
+    const sec = root.querySelector('.gta-rev-sector');
+    a.style.transform = `rotate(${-T.revEnter}deg)`;
+    b.style.transform = `rotate(${T.revEnter}deg)`;
+    const span = 360 - 2 * T.revEnter;
+    sec.style.background = `conic-gradient(from ${T.revEnter}deg, rgba(255, 90, 60, 0.16) 0 ${span}deg, transparent ${span}deg 360deg)`;
+  }
+  applyTuneVisuals();
 
   function stickCenter() {
     const r = stick.getBoundingClientRect();
@@ -389,9 +449,8 @@
   // a `canPivotInPlace` flag (used by the tank) that yaws even at standstill.
   // We flip it on while the car is (nearly) stopped and restore the original
   // value once it moves, so handling at speed is untouched.
-  const PIVOT_ON_BELOW = 20; // |vehicleSpeed| below this → pivot enabled
-  const PIVOT_OFF_ABOVE = 35; // … above this → original handling restored
-  const PIVOT_SENS_SCALE = 1.0; // pivot yaw = steeringSensitivity × 0.75 at standstill (~147°/s for a typical car)
+  // Tunables: T.pivotOn (|speed| below → enabled), T.pivotOff (above → restored),
+  // T.pivotSens (× steeringSensitivity while patched; engine yaw at standstill is 0.75×).
   const PIVOT_KEY = 'gtajs-mobile:pivot';
   let pivotEnabled = (() => {
     if (location.search.includes('nopivot')) return false;
@@ -424,14 +483,58 @@
     if (pivotPatched && pivotPatched.profile !== prof) unpatchPivot();
     if (!prof) return;
     const v = Math.abs(pl.vehicleSpeed ?? 0);
-    if (!pivotPatched && v < PIVOT_ON_BELOW && !prof.canPivotInPlace) {
+    if (!pivotPatched && v < T.pivotOn && !prof.canPivotInPlace) {
       pivotPatched = { profile: prof, canPivotInPlace: prof.canPivotInPlace, steeringSensitivity: prof.steeringSensitivity };
       prof.canPivotInPlace = true;
-      prof.steeringSensitivity = prof.steeringSensitivity * PIVOT_SENS_SCALE;
-    } else if (pivotPatched && v > PIVOT_OFF_ABOVE) {
+      prof.steeringSensitivity = prof.steeringSensitivity * T.pivotSens;
+    } else if (pivotPatched && v > T.pivotOff) {
       unpatchPivot();
     }
   }
+
+  // ---------- Tune panel: −/+ steppers for every tunable, persisted ----------
+  const tunePanel = root.querySelector('#gtaTunePanel');
+  const tuneRows = tunePanel.querySelector('.gta-tune-rows');
+  const onTap = (el, fn) => {
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); el.classList.add('is-down'); });
+    el.addEventListener('pointerup', () => { el.classList.remove('is-down'); setTimeout(fn, 0); });
+    el.addEventListener('pointercancel', () => el.classList.remove('is-down'));
+  };
+  const fmtVal = (d, v) => (d.step < 1 ? v.toFixed(1) : String(Math.round(v)));
+  function renderTune() {
+    tuneRows.innerHTML = '';
+    for (const d of TUNE_DEFS) {
+      const row = document.createElement('div');
+      row.className = 'gta-tune-row';
+      row.innerHTML = `<div class="gta-tune-label">${d.label}</div>
+        <button type="button" class="gta-pill" data-dir="-1">−</button>
+        <div class="gta-tune-value">${fmtVal(d, T[d.k])}</div>
+        <button type="button" class="gta-pill" data-dir="1">+</button>`;
+      const valueEl = row.querySelector('.gta-tune-value');
+      for (const b of row.querySelectorAll('[data-dir]')) {
+        onTap(b, () => {
+          const next = Math.min(d.max, Math.max(d.min, T[d.k] + d.step * Number(b.dataset.dir)));
+          T[d.k] = Math.round(next * 1000) / 1000;
+          valueEl.textContent = fmtVal(d, T[d.k]);
+          if (T[d.k] === d.def) valueEl.classList.remove('is-changed'); else valueEl.classList.add('is-changed');
+          saveTune();
+          applyTuneVisuals();
+          unpatchPivot(); // re-patch with the new sensitivity on the next tick
+        });
+      }
+      if (T[d.k] !== d.def) valueEl.classList.add('is-changed');
+      tuneRows.appendChild(row);
+    }
+  }
+  onTap(root.querySelector('#gtaTune'), () => { renderTune(); tunePanel.hidden = false; });
+  onTap(tunePanel.querySelector('.gta-tune-close'), () => { tunePanel.hidden = true; });
+  onTap(tunePanel.querySelector('.gta-tune-reset'), () => {
+    for (const d of TUNE_DEFS) T[d.k] = d.def;
+    saveTune();
+    applyTuneVisuals();
+    unpatchPivot();
+    renderTune();
+  });
 
   (function loop() {
     stickTick();
@@ -497,7 +600,9 @@
     if (inVehicle !== lastInVehicle) {
       lastInVehicle = inVehicle;
       enterBtn.textContent = inVehicle ? 'Exit' : 'Enter';
-      jumpBtn.textContent = inVehicle ? 'Brake' : 'Jump';
+      // In vehicles the handbrake comes from holding the stick centre; the
+      // button is only needed on foot (jump).
+      jumpBtn.hidden = inVehicle;
     }
   }
   root.hidden = true;
@@ -510,5 +615,5 @@
   });
 
   // Expose for debugging from the console
-  window.gtaMobile = { press, release, tap, releaseAll, root };
+  window.gtaMobile = { press, release, tap, releaseAll, root, tune: T, TUNE_DEFS };
 })();

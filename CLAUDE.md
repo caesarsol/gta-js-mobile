@@ -85,3 +85,10 @@ ENTER) immediately to get in and test driving. Don't bother with `spawnVehicleNe
 - Fixed-position elements have `offsetParent === null` (filters in tests).
 - Pages `index.html`/`boot.js` can lag 10 min; everything under `mobile/` is instant thanks
   to the timestamped loader.
+
+## Probes in `scripts/`
+
+- `headless.js` — helpers + smoke test (enter the spawn car, drive).
+- `probe-pivot-wall.js` — drive into a wall, compare standstill steering with/without pivot.
+- `probe-handbrake.js` — centre-hold handbrake (on foot vs vehicle) and the Tune panel steppers.
+All tunables live in `TUNE_DEFS` (mobile.js) and are reachable as `window.gtaMobile.tune`.
