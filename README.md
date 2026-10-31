@@ -41,10 +41,8 @@ The game reads input only through `keydown`/`keyup` on `document`, keyed by `eve
   hysteresis back to 100°) you back up toward it instead of U-turning; the knob turns red
   while reversing. On foot you always turn and walk forward. Thresholds are constants at
   the top of `mobile.js`.
-- **Right**: FIRE, ENTER/EXIT, JUMP (on foot only). In vehicles the **handbrake** is pulled by
-  holding the finger inside the stick's centre ring for `hbDelay` ms (default 500); the ring
-  turns red.
-- **Top**: `?` menu, fullscreen (+ landscape lock where supported); on the left **Pivot** toggle (white = on), a **Tune** panel with −/+ steppers for every control parameter (rings, turn hysteresis, reverse sector, handbrake radius/delay, pivot speeds/sensitivity), persisted in LocalStorage, and a **Sound** pill (default off: tapping it is the user gesture that unlocks the engine's AudioContext; it also loops a silent `mobile/silence.wav` so iOS keeps Web Audio alive with the ringer switch on silent); on the right the list of owned weapons with ammo in parentheses, active one in white, tap to select.
+- **Right**: FIRE, ENTER/EXIT, JUMP/BRAKE.
+- **Top bar** (icons): `?` options, fullscreen (hidden where unsupported, e.g. iPhone Safari), sound on/off (default off; tapping it is the gesture that unlocks the engine's AudioContext, and a silent `mobile/silence.wav` loop keeps iOS Web Audio alive with the ringer on silent), gear = **Tune** panel (−/+ steppers for stick rings, turn hysteresis and reverse sector, each with a tap-to-show help text, persisted), reload. Left: save / load icons. Right: owned weapons with ammo, active in white, tap to select.
 - Hidden automatically while the intro/options dialog is open or on game over.
 - Desktop: overlay is off; append `?touch` to the URL to force it.
 

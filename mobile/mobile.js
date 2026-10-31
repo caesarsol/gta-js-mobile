@@ -10,6 +10,7 @@
  *                              behind the current facing = reverse
  *   Right side               → FIRE (ControlLeft), ENTER/EXIT (Enter),
  *                              JUMP/HANDBRAKE (Space)
+ *   Top bar                  → ? options, fullscreen, sound, tune (icons)
  *   Top                      → weapon prev/next (KeyZ/KeyX), menu (?), fullscreen
  *
  * The overlay hides itself while the intro/options dialogs are open or the
@@ -70,6 +71,19 @@
     for (const code of [...down]) release(code);
   }
 
+  // ---------- Icons (inline SVG, Material-style, 24px viewBox) ----------
+  const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+  const ICONS = {
+    fullscreen: svg('M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z'),
+    soundOn: svg('M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 7.97v8.05A4.47 4.47 0 0016.5 12zM14 3.23v2.06a7 7 0 010 13.42v2.06a9 9 0 000-17.54z'),
+    soundOff: svg('M16.5 12A4.5 4.5 0 0014 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0021 12a9 9 0 00-7-8.77v2.06A7 7 0 0119 12zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 003.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z'),
+    gear: svg('M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z'),
+    save: svg('M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zm-5 16a3 3 0 110-6 3 3 0 010 6zm3-10H5V5h10v4z'),
+    load: svg('M20 6h-8l-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm0 12H4V8h16v10z'),
+    reload: svg('M17.65 6.35A7.96 7.96 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L13 11h7V4l-2.35 2.35z'),
+  };
+  window.gtaIcons = ICONS;
+
   // ---------- DOM ----------
   const root = document.createElement('div');
   root.id = 'gtaMobile';
@@ -91,11 +105,12 @@
     <button type="button" class="gta-btn gta-btn-enter" data-key="Enter" id="gtaEnter">Enter</button>
     <button type="button" class="gta-btn gta-btn-jump" data-key="Space" id="gtaJump">Jump</button>
 
-    <button type="button" class="gta-pill" id="gtaMenu" data-tap="Slash">?</button>
-    <button type="button" class="gta-pill" id="gtaFullscreen">⛶</button>
-    <button type="button" class="gta-pill" id="gtaPivot" title="Low-speed pivot in vehicles">Pivot</button>
-    <button type="button" class="gta-pill" id="gtaTune" title="Tune controls">Tune</button>
-    <button type="button" class="gta-pill" id="gtaSound" title="Sound on/off">Sound</button>
+    <div id="gtaTopBar">
+      <button type="button" class="gta-pill" id="gtaMenu" data-tap="Slash" aria-label="Options">?</button>
+      <button type="button" class="gta-pill" id="gtaFullscreen" aria-label="Fullscreen">${ICONS.fullscreen}</button>
+      <button type="button" class="gta-pill" id="gtaSound" aria-label="Sound on/off">${ICONS.soundOff}</button>
+      <button type="button" class="gta-pill" id="gtaTune" aria-label="Tune controls">${ICONS.gear}</button>
+    </div>
     <div id="gtaWeapons"></div>
     <div id="gtaTunePanel" class="gta-panel" hidden>
       <div class="gta-panel-title">Tune controls</div>
@@ -210,7 +225,9 @@
   }
 
   // ---------- Fullscreen + orientation ----------
-  root.querySelector('#gtaFullscreen').addEventListener('pointerdown', async (e) => {
+  const fsBtn = root.querySelector('#gtaFullscreen');
+  if (!document.fullscreenEnabled && !document.documentElement.webkitRequestFullscreen) fsBtn.hidden = true;
+  fsBtn.addEventListener('pointerdown', async (e) => {
     e.preventDefault();
     try {
       if (!document.fullscreenElement) {
@@ -236,21 +253,21 @@
   // Distance from the center picks the speed; reverse is decided by *where the
   // stick points relative to the current facing*, never by distance: if the
   // requested direction is behind you, go backwards toward it instead of
-  // U-turning (hysteresis keeps it from flickering when sideways). Holding the
-  // finger inside the centre ring (vehicles only) pulls the handbrake.
+  // U-turning (hysteresis keeps it from flickering when sideways).
   const TUNE_KEY = 'gtajs-mobile:tune';
   const TUNE_DEFS = [
-    { k: 'ringMove', label: 'Stick · move ring (px)', def: 20, step: 2, min: 6, max: 60 },
-    { k: 'ringRun', label: 'Stick · run ring (px)', def: 110, step: 5, min: 40, max: 130 },
-    { k: 'turnStart', label: 'Turn · start (°)', def: 8, step: 1, min: 1, max: 30 },
-    { k: 'turnStop', label: 'Turn · stop (°)', def: 3, step: 1, min: 0, max: 20 },
-    { k: 'revEnter', label: 'Reverse · enter (°)', def: 130, step: 5, min: 90, max: 180 },
-    { k: 'revExit', label: 'Reverse · exit (°)', def: 100, step: 5, min: 60, max: 180 },
-    { k: 'hbRadius', label: 'Handbrake · centre radius (px)', def: 20, step: 2, min: 0, max: 60 },
-    { k: 'hbDelay', label: 'Handbrake · hold delay (ms)', def: 500, step: 100, min: 0, max: 2000 },
-    { k: 'pivotOn', label: 'Pivot · on below speed', def: 20, step: 5, min: 0, max: 100 },
-    { k: 'pivotOff', label: 'Pivot · off above speed', def: 35, step: 5, min: 0, max: 150 },
-    { k: 'pivotSens', label: 'Pivot · sensitivity ×', def: 1, step: 0.1, min: 0.1, max: 3 },
+    { k: 'ringMove', label: 'Stick · move ring (px)', def: 20, step: 2, min: 6, max: 60,
+      help: 'Dead zone radius. Inside it the stick does nothing; beyond it you walk / drive.' },
+    { k: 'ringRun', label: 'Stick · run ring (px)', def: 110, step: 5, min: 40, max: 130,
+      help: 'Beyond this radius you run (on foot only). Drawn as the dashed ring.' },
+    { k: 'turnStart', label: 'Turn · start (°)', def: 1, step: 1, min: 1, max: 30,
+      help: 'Start turning when your heading is off the stick direction by more than this. Smaller = snappier but can jitter.' },
+    { k: 'turnStop', label: 'Turn · stop (°)', def: 0, step: 1, min: 0, max: 20,
+      help: 'Stop turning once the error is within this. Keep it below "Turn · start".' },
+    { k: 'revEnter', label: 'Reverse · enter (°)', def: 130, step: 5, min: 90, max: 180,
+      help: 'Cars only. If the stick points more than this behind the car, you reverse toward it instead of U-turning. Drawn as the dashed red sector.' },
+    { k: 'revExit', label: 'Reverse · exit (°)', def: 100, step: 5, min: 60, max: 180,
+      help: 'Leave reverse when the stick comes back within this angle. Keep it below "Reverse · enter" (hysteresis).' },
   ];
   const T = {};
   function loadTune() {
@@ -283,9 +300,7 @@
     stickDist = 0;
   let turning = 0; // -1 = pressing ArrowRight, 0 = none, +1 = pressing ArrowLeft
   let reversing = false;
-  let centreSince = 0; // performance.now() when the finger entered the centre ring (0 = not there)
-  const MOVE_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft'];
-  const held = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, ShiftLeft: false, Space: false };
+  const held = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, ShiftLeft: false };
 
   function setHeld(code, on) {
     if (held[code] === on) return;
@@ -314,20 +329,9 @@
     const pl = g && g.player;
     if (stickId === null || !pl || root.hidden) return;
 
-    // Handbrake: finger held inside the centre ring (vehicles only).
-    const inCentre = pl.inVehicle && stickDist < T.hbRadius;
-    if (inCentre) {
-      if (!centreSince) centreSince = performance.now();
-      setHeld('Space', performance.now() - centreSince >= T.hbDelay);
-    } else {
-      centreSince = 0;
-      setHeld('Space', false);
-    }
-    stick.dataset.hb = held.Space ? '1' : '0';
-
     const gear = stickDist >= T.ringRun ? 2 : stickDist >= T.ringMove ? 1 : 0;
     if (gear === 0) {
-      for (const code of MOVE_KEYS) setHeld(code, false);
+      for (const code of Object.keys(held)) setHeld(code, false);
       turning = 0;
       reversing = false;
       return;
@@ -379,11 +383,9 @@
     stick.classList.remove('is-active');
     delete stick.dataset.gear;
     delete stick.dataset.mode;
-    delete stick.dataset.hb;
     knob.style.transform = '';
     turning = 0;
     reversing = false;
-    centreSince = 0;
     for (const code of Object.keys(held)) setHeld(code, false);
   }
 
@@ -444,55 +446,6 @@
     stick.dataset.vehicle = pl.inVehicle ? '1' : '0'; // hides the run ring in vehicles
   }
 
-  // ---------- Experiment: low-speed pivot in vehicles ----------
-  // The engine only yaws a car in proportion to its speed, so against a wall
-  // (speed 0) steering does nothing and you are stuck. Handling profiles have
-  // a `canPivotInPlace` flag (used by the tank) that yaws even at standstill.
-  // We flip it on while the car is (nearly) stopped and restore the original
-  // value once it moves, so handling at speed is untouched.
-  // Tunables: T.pivotOn (|speed| below → enabled), T.pivotOff (above → restored),
-  // T.pivotSens (× steeringSensitivity while patched; engine yaw at standstill is 0.75×).
-  const PIVOT_KEY = 'gtajs-mobile:pivot';
-  let pivotEnabled = (() => {
-    if (location.search.includes('nopivot')) return false;
-    try { return localStorage.getItem(PIVOT_KEY) !== '0'; } catch { return true; }
-  })();
-  let pivotPatched = null; // { profile, canPivotInPlace, steeringSensitivity }
-
-  const pivotBtn = root.querySelector('#gtaPivot');
-  function renderPivotBtn() {
-    pivotBtn.classList.toggle('is-on', pivotEnabled);
-    pivotBtn.setAttribute('aria-pressed', String(pivotEnabled));
-  }
-  renderPivotBtn();
-  pivotBtn.addEventListener('pointerdown', (e) => e.preventDefault());
-  pivotBtn.addEventListener('pointerup', () => {
-    pivotEnabled = !pivotEnabled;
-    try { localStorage.setItem(PIVOT_KEY, pivotEnabled ? '1' : '0'); } catch { /* ignore */ }
-    if (!pivotEnabled) unpatchPivot();
-    renderPivotBtn();
-  });
-  function unpatchPivot() {
-    if (!pivotPatched) return;
-    pivotPatched.profile.canPivotInPlace = pivotPatched.canPivotInPlace;
-    pivotPatched.profile.steeringSensitivity = pivotPatched.steeringSensitivity;
-    pivotPatched = null;
-  }
-  function lowSpeedPivotTick(pl) {
-    if (!pivotEnabled) return;
-    const prof = pl.inVehicle ? pl.handlingProfile : null;
-    if (pivotPatched && pivotPatched.profile !== prof) unpatchPivot();
-    if (!prof) return;
-    const v = Math.abs(pl.vehicleSpeed ?? 0);
-    if (!pivotPatched && v < T.pivotOn && !prof.canPivotInPlace) {
-      pivotPatched = { profile: prof, canPivotInPlace: prof.canPivotInPlace, steeringSensitivity: prof.steeringSensitivity };
-      prof.canPivotInPlace = true;
-      prof.steeringSensitivity = prof.steeringSensitivity * T.pivotSens;
-    } else if (pivotPatched && v > T.pivotOff) {
-      unpatchPivot();
-    }
-  }
-
   // ---------- Tune panel: −/+ steppers for every tunable, persisted ----------
   const tunePanel = root.querySelector('#gtaTunePanel');
   const tuneRows = tunePanel.querySelector('.gta-tune-rows');
@@ -507,11 +460,14 @@
     for (const d of TUNE_DEFS) {
       const row = document.createElement('div');
       row.className = 'gta-tune-row';
-      row.innerHTML = `<div class="gta-tune-label">${d.label}</div>
+      row.innerHTML = `<div class="gta-tune-label">${d.label} <span class="gta-tune-q">?</span></div>
         <button type="button" class="gta-pill" data-dir="-1">−</button>
         <div class="gta-tune-value">${fmtVal(d, T[d.k])}</div>
-        <button type="button" class="gta-pill" data-dir="1">+</button>`;
+        <button type="button" class="gta-pill" data-dir="1">+</button>
+        <div class="gta-tune-help" hidden>${d.help}</div>`;
       const valueEl = row.querySelector('.gta-tune-value');
+      const helpEl = row.querySelector('.gta-tune-help');
+      onTap(row.querySelector('.gta-tune-label'), () => { helpEl.hidden = !helpEl.hidden; });
       for (const b of row.querySelectorAll('[data-dir]')) {
         onTap(b, () => {
           const next = Math.min(d.max, Math.max(d.min, T[d.k] + d.step * Number(b.dataset.dir)));
@@ -520,7 +476,6 @@
           if (T[d.k] === d.def) valueEl.classList.remove('is-changed'); else valueEl.classList.add('is-changed');
           saveTune();
           applyTuneVisuals();
-          unpatchPivot(); // re-patch with the new sensitivity on the next tick
         });
       }
       if (T[d.k] !== d.def) valueEl.classList.add('is-changed');
@@ -533,15 +488,12 @@
     for (const d of TUNE_DEFS) T[d.k] = d.def;
     saveTune();
     applyTuneVisuals();
-    unpatchPivot();
     renderTune();
   });
 
   (function loop() {
     stickTick();
     updateHeadingIndicator();
-    const pl = window.game && window.game.player;
-    if (pl) lowSpeedPivotTick(pl);
     requestAnimationFrame(loop);
   })();
 
@@ -582,9 +534,13 @@
     renderSoundBtn();
   }
   function renderSoundBtn() {
-    soundBtn.classList.toggle('is-on', soundOn);
-    soundBtn.textContent = soundOn && !audioRunning() ? 'Sound (tap)' : 'Sound';
+    const pending = soundOn && !audioRunning();
+    soundBtn.classList.toggle('is-on', soundOn && !pending);
+    soundBtn.classList.toggle('is-pending', pending);
+    soundBtn.innerHTML = soundOn ? ICONS.soundOn : ICONS.soundOff;
+    soundBtn.title = soundOn ? (pending ? 'Sound on — tap anywhere to resume' : 'Sound on') : 'Sound off';
   }
+  let soundRendered = '';
   renderSoundBtn();
   soundBtn.addEventListener('pointerdown', (e) => e.preventDefault());
   soundBtn.addEventListener('pointerup', () => {
@@ -638,6 +594,7 @@
   // ---------- Visibility / game state sync ----------
   const enterBtn = root.querySelector('#gtaEnter');
   const jumpBtn = root.querySelector('#gtaJump');
+  const topBar = root.querySelector('#gtaTopBar');
   let lastInVehicle = null;
 
   function syncWithGame() {
@@ -654,14 +611,16 @@
     }
     if (g.player && !hide) syncWeapons(g.player);
     if (!soundApplied && g.soundManager) applySound(false); // default: muted until the pill is tapped
-    if (soundOn && soundBtn.textContent !== (audioRunning() ? 'Sound' : 'Sound (tap)')) renderSoundBtn();
+    const soundSig = `${soundOn}:${audioRunning()}`;
+    if (soundSig !== soundRendered) { soundRendered = soundSig; renderSoundBtn(); }
+    // boot.js mounts the reload pill outside the overlay: adopt it into the top bar with an icon.
+    const reloadEl = document.getElementById('gtaReload');
+    if (reloadEl && reloadEl.parentElement !== topBar) { reloadEl.innerHTML = ICONS.reload; reloadEl.setAttribute('aria-label', 'Reload'); topBar.appendChild(reloadEl); }
     const inVehicle = !!(g.player && g.player.inVehicle);
     if (inVehicle !== lastInVehicle) {
       lastInVehicle = inVehicle;
       enterBtn.textContent = inVehicle ? 'Exit' : 'Enter';
-      // In vehicles the handbrake comes from holding the stick centre; the
-      // button is only needed on foot (jump).
-      jumpBtn.hidden = inVehicle;
+      jumpBtn.textContent = inVehicle ? 'Brake' : 'Jump';
     }
   }
   root.hidden = true;

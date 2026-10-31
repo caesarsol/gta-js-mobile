@@ -269,29 +269,35 @@ canvas {
 .gta-pill.is-down {
   filter: brightness(0.85);
 }
-/* Top-bar pills are absolutely positioned by id */
-#gtaMenu,
-#gtaFullscreen,
+/* Left pills are absolutely positioned by id; the top bar is a flex row */
 #gtaSaveBtn,
-#gtaLoadBtn,
-#gtaPivot,
-#gtaTune,
-#gtaSound,
-#gtaReload {
+#gtaLoadBtn {
   position: absolute;
   top: var(--pad-t);
 }
-#gtaPivot {
-  top: calc(var(--pad-t) + 52px);
-  left: var(--pad-l);
+#gtaTopBar {
+  position: absolute;
+  top: var(--pad-t);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
 }
-#gtaTune {
-  top: calc(var(--pad-t) + 104px);
-  left: var(--pad-l);
+#gtaTopBar .gta-pill {
+  position: static;
+  transform: none;
+  z-index: auto;
 }
-#gtaSound {
-  top: calc(var(--pad-t) + 156px);
-  left: var(--pad-l);
+.gta-pill svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  fill: currentColor;
+}
+.gta-pill.is-pending {
+  color: #ffc400;
+  border-color: #ffc400;
 }
 
 /* Generic modal panel (tune panel; the load menu shares the look) */
@@ -333,7 +339,7 @@ canvas {
   display: grid;
 }
 #gtaTunePanel {
-  width: 92vw;
+  width: calc(92vw - 10px);
 }
 .gta-tune-rows {
   display: grid;
@@ -355,6 +361,29 @@ canvas {
 }
 .gta-tune-label {
   color: rgba(255, 255, 255, 0.85);
+  pointer-events: auto;
+}
+.gta-tune-q {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  vertical-align: middle;
+}
+.gta-tune-help {
+  grid-column: 1 / -1;
+  padding: 4px 0 6px;
+  color: #ffc400;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.gta-tune-help[hidden] {
+  display: none;
 }
 .gta-tune-value {
   text-align: center;
@@ -362,14 +391,6 @@ canvas {
 }
 .gta-tune-value.is-changed {
   color: #ffc400;
-}
-/* Centre ring turns red while the handbrake is pulled from the stick centre */
-#gtaStick[data-hb='1'] .gta-ring-move {
-  border-color: #ff5a3c;
-  border-width: 3px;
-}
-#gtaStick[data-hb='1'] #gtaStickKnob {
-  background: rgba(255, 90, 60, 0.9);
 }
 
 /* Weapon list: a column of pills in the top-right corner */
@@ -383,28 +404,21 @@ canvas {
   gap: 6px;
   pointer-events: none;
 }
-#gtaMenu {
-  left: 50%;
-  transform: translateX(calc(-50% - 36px));
-}
-#gtaFullscreen {
-  left: 50%;
-  transform: translateX(calc(-50% + 36px));
-}
 
 /* ---- boot.js: version label + reload pill ---- */
 #gtaVersion {
   position: fixed;
   left: max(12px, env(safe-area-inset-left));
-  top: calc(max(8px, env(safe-area-inset-top)) + 204px);
+  top: calc(max(8px, env(safe-area-inset-top)) + 52px);
   z-index: 1001;
   color: rgba(255, 255, 255, 0.55);
   font: 10px/1 ui-monospace, Menlo, Consolas, monospace;
   pointer-events: none;
 }
 #gtaReload {
+  /* mounted by boot.js; mobile.js adopts it into #gtaTopBar */
   position: fixed;
-  z-index: 999; /* below #gtaMobile (1000) so panels cover it */
+  z-index: 999;
   top: max(8px, env(safe-area-inset-top));
   left: 50%;
   transform: translateX(calc(-50% + 108px));

@@ -307,8 +307,8 @@
   const ui = document.createElement('div');
   ui.id = 'gtaSave';
   ui.innerHTML = `
-    <button type="button" class="gta-pill" id="gtaSaveBtn">Save</button>
-    <button type="button" class="gta-pill" id="gtaLoadBtn">Load</button>
+    <button type="button" class="gta-pill" id="gtaSaveBtn" aria-label="Save game" title="Save">${(window.gtaIcons && window.gtaIcons.save) || 'Save'}</button>
+    <button type="button" class="gta-pill" id="gtaLoadBtn" aria-label="Load game" title="Load">${(window.gtaIcons && window.gtaIcons.load) || 'Load'}</button>
     <div id="gtaToast" hidden><span></span><button type="button" class="gta-pill gta-pill--primary" id="gtaToastAction" hidden></button></div>
     <div id="gtaLoadMenu" hidden>
       <div class="gta-loadmenu-title">Load game</div>

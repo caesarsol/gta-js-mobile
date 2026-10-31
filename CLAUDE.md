@@ -23,8 +23,8 @@ https://caesarsol.github.io/gta-js-mobile/ (GitHub Pages from `main`).
 - `mobile/boot.js`: cache-busting loader (`?v=<timestamp>` for our files), version label,
   reload pill. Changing it costs up to 10 min of Pages CDN cache → avoid; add logic to the
   other files instead. If you must, bump `?v=N` in `index.html`.
-- `mobile/mobile.js` + `mobile.css`: touch overlay (joystick, buttons, pills, weapon list,
-  pivot experiment).
+- `mobile/mobile.js` + `mobile.css`: touch overlay (joystick, buttons, top-bar icon pills, weapon
+  list, Tune panel, sound pill). Icons are inline SVG in `ICONS` (also `window.gtaIcons`).
 - `mobile/save.js`: save/load (manual + autosave on tab hide, auto-load on first start,
   New game).
 - `mobile/autostart.js`: skips the intro dialog (downloads the demo ZIP if not cached,
@@ -50,6 +50,8 @@ padding, never fixed width/height. Keep the reset on the component classes, not 
   world = `(sin r, −cos r)`. `r = π` faces screen-up. `ArrowLeft` increases `r`.
 - Cars yaw in proportion to speed (`pl()`), zero at standstill unless the handling profile
   has `canPivotInPlace`. Steering sign is **inverted while reversing**.
+  (Tried and **rejected** by the user: a low-speed pivot patch, and a handbrake from holding
+  the stick centre. Don't propose them again.)
 - Player position: `player.position` (Three.js) + `physicsBody` (planck, world/10, y flipped).
   `teleportTo()` snaps to block centres; set both directly for exact positions.
 - `styleData.cars` is an **object** keyed by model index (no `.length`/`indexOf`).
@@ -94,6 +96,5 @@ ENTER) immediately to get in and test driving. Don't bother with `spawnVehicleNe
 ## Probes in `scripts/`
 
 - `headless.js` — helpers + smoke test (enter the spawn car, drive).
-- `probe-pivot-wall.js` — drive into a wall, compare standstill steering with/without pivot.
-- `probe-handbrake.js` — centre-hold handbrake (on foot vs vehicle) and the Tune panel steppers.
+- `probe-tune.js` — Tune panel steppers, persistence and help toggle.
 All tunables live in `TUNE_DEFS` (mobile.js) and are reachable as `window.gtaMobile.tune`.
