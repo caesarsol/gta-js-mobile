@@ -308,15 +308,15 @@
   ui.innerHTML = `
     <button type="button" class="gta-pill" id="gtaSaveBtn">Save</button>
     <button type="button" class="gta-pill" id="gtaLoadBtn">Load</button>
-    <div id="gtaToast" hidden><span></span><button type="button" id="gtaToastAction" hidden></button></div>
+    <div id="gtaToast" hidden><span></span><button type="button" class="gta-pill gta-pill--primary" id="gtaToastAction" hidden></button></div>
     <div id="gtaLoadMenu" hidden>
       <div class="gta-loadmenu-title">Load game</div>
       <div class="gta-loadmenu-rows"></div>
       <div class="gta-loadmenu-row">
         <div class="gta-loadmenu-info"><strong>New game</strong><small>Clears both slots and restarts from the beginning</small></div>
-        <button type="button" class="gta-loadmenu-btn gta-loadmenu-btn-danger" id="gtaNewGame">Reset</button>
+        <button type="button" class="gta-pill gta-pill--danger" id="gtaNewGame">Reset</button>
       </div>
-      <button type="button" class="gta-loadmenu-cancel">Cancel</button>
+      <button type="button" class="gta-pill gta-pill--block gta-loadmenu-cancel">Cancel</button>
     </div>
   `;
   const mount = () => host().appendChild(ui);
@@ -407,8 +407,8 @@
       row.innerHTML = `
         <div class="gta-loadmenu-info"><strong>${slot === 'manual' ? 'Manual' : 'Autosave'}</strong>
           <small>${fmt(d.ts)} · ${d.suburb || '?'} · $${d.hud.score}${d.mission ? '' : ' · player only'}</small></div>
-        <button type="button" class="gta-loadmenu-btn" data-full>Load</button>
-        <button type="button" class="gta-loadmenu-btn gta-loadmenu-btn-alt" ${d.mission ? '' : 'hidden'}>Player only</button>`;
+        <button type="button" class="gta-pill gta-pill--primary" data-full>Load</button>
+        <button type="button" class="gta-pill gta-loadmenu-btn-alt" ${d.mission ? '' : 'hidden'}>Player only</button>`;
       onTap(row.querySelector('[data-full]'), () => { menu.hidden = true; load(slot, false); });
       onTap(row.querySelector('.gta-loadmenu-btn-alt'), () => { menu.hidden = true; load(slot, true); });
       rows.appendChild(row);

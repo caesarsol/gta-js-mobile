@@ -22,16 +22,34 @@ body {
 canvas {
   touch-action: none;
 }
-#gtaMobile button {
+/* Component reset shared by every overlay control (pills and round buttons),
+   wherever they are mounted (boot.js mounts the reload pill outside #gtaMobile). */
+.gta-pill,
+.gta-btn {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
   -webkit-user-drag: none;
+  -webkit-tap-highlight-color: transparent;
   outline: none;
   appearance: none;
   -webkit-appearance: none;
   margin: 0;
   box-sizing: border-box;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;
+  font: 700 14px/1 ui-monospace, Menlo, Consolas, monospace;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.gta-pill.is-down,
+.gta-btn.is-down {
+  background: rgba(255, 196, 0, 0.9);
+  color: #000;
+  border-color: #ffc400;
 }
 
 #gtaMobile {
@@ -178,27 +196,16 @@ canvas {
   touch-action: none;
 }
 
-/* ---- Right side: buttons ---- */
+/* ---- Right side: round action buttons (same tokens as .gta-pill) ---- */
 .gta-btn {
   position: absolute;
-  pointer-events: auto;
-  touch-action: none;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  background: rgba(0, 0, 0, 0.45);
-  color: #fff;
-  font: 700 12px/1 ui-monospace, Menlo, Consolas, monospace;
+  border-width: 2px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-.gta-btn.is-down {
-  background: rgba(255, 196, 0, 0.9);
-  color: #000;
-  border-color: #ffc400;
 }
 .gta-btn-fire {
   right: calc(var(--pad-r) + 10px);
@@ -220,42 +227,64 @@ canvas {
   width: 72px;
   height: 72px;
 }
-/* ---- Top bar: pills (44px tall = minimum comfortable touch target) ---- */
+/* ---- Pill: the one component for every tappable control ----
+   Modifiers: .is-on (white = active/selected), .is-down (pressed, yellow),
+   .gta-pill--primary (yellow), .gta-pill--danger (red outline),
+   .gta-pill--dim (unavailable), .gta-pill--block (full width).
+   Positioning is done by id, never by the component. */
 .gta-pill {
-  position: absolute;
-  top: var(--pad-t);
-  pointer-events: auto;
-  touch-action: none;
-  padding: 11px 16px;
-  display: grid;
+  display: inline-grid;
   place-items: center;
+  min-height: 40px;
+  padding: 11px 16px;
   border-radius: 22px;
   white-space: nowrap;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
-  font: 700 14px/1 ui-monospace, Menlo, Consolas, monospace;
+  text-align: center;
 }
-.gta-pill.is-down {
-  background: rgba(255, 196, 0, 0.9);
-  color: #000;
-}
-/* Toggle pills: white when on, black when off */
-.gta-toggle {
-  background: rgba(0, 0, 0, 0.85);
-  color: #fff;
-}
-.gta-toggle.is-on {
+.gta-pill.is-on {
   background: #fff;
   color: #000;
   border-color: #fff;
+}
+.gta-pill--primary {
+  background: #ffc400;
+  color: #000;
+  border-color: #ffc400;
+}
+.gta-pill--danger {
+  color: #ff5a3c;
+  border-color: #ff5a3c;
+}
+.gta-pill--dim {
+  opacity: 0.55;
+}
+.gta-pill--block {
+  display: grid;
+  width: 100%;
+}
+.gta-pill[hidden],
+.gta-btn[hidden] {
+  display: none;
+}
+.gta-pill.is-down {
+  filter: brightness(0.85);
+}
+/* Top-bar pills are absolutely positioned by id */
+#gtaMenu,
+#gtaFullscreen,
+#gtaSaveBtn,
+#gtaLoadBtn,
+#gtaPivot,
+#gtaReload {
+  position: absolute;
+  top: var(--pad-t);
 }
 #gtaPivot {
   top: calc(var(--pad-t) + 52px);
   left: var(--pad-l);
 }
 
-/* Weapon list, right edge under the HUD score */
+/* Weapon list: a column of pills in the top-right corner */
 #gtaWeapons {
   position: absolute;
   right: var(--pad-r);
@@ -265,25 +294,6 @@ canvas {
   align-items: flex-end;
   gap: 6px;
   pointer-events: none;
-}
-.gta-weapon {
-  pointer-events: auto;
-  touch-action: none;
-  padding: 9px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font: 700 13px/1 ui-monospace, Menlo, Consolas, monospace;
-  white-space: nowrap;
-}
-.gta-weapon.is-active {
-  background: #fff;
-  color: #000;
-  border-color: #fff;
-}
-.gta-weapon.is-empty {
-  opacity: 0.55;
 }
 #gtaMenu {
   left: 50%;
@@ -310,7 +320,6 @@ canvas {
   top: max(8px, env(safe-area-inset-top));
   left: 50%;
   transform: translateX(calc(-50% + 108px));
-  font-size: 20px;
 }
 
 /* ---- Save / load (save.js) ---- */
@@ -341,34 +350,6 @@ canvas {
 #gtaToast[hidden],
 #gtaLoadMenu[hidden] {
   display: none;
-}
-#gtaToastAction,
-.gta-loadmenu-btn,
-.gta-loadmenu-cancel {
-  border: 1px solid #ffc400;
-  border-radius: 8px;
-  background: #ffc400;
-  color: #000;
-  font: 700 14px/1 ui-monospace, Menlo, Consolas, monospace;
-  padding: 11px 18px;
-  flex: 0 0 auto;
-  white-space: nowrap;
-  touch-action: none;
-}
-.gta-loadmenu-btn-alt,
-.gta-loadmenu-cancel {
-  background: transparent;
-  color: #ffc400;
-}
-.gta-loadmenu-btn-danger {
-  background: transparent;
-  color: #ff5a3c;
-  border-color: #ff5a3c;
-}
-#gtaToastAction.is-down,
-.gta-loadmenu-btn.is-down,
-.gta-loadmenu-cancel.is-down {
-  filter: brightness(0.8);
 }
 #gtaLoadMenu {
   position: absolute;
@@ -413,7 +394,6 @@ canvas {
 }
 .gta-loadmenu-cancel {
   margin-top: 12px;
-  width: 100%;
 }
 
 /* ---- Portrait: ask to rotate ---- */

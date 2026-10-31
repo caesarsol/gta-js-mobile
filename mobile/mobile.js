@@ -93,7 +93,7 @@
 
     <button type="button" class="gta-pill" id="gtaMenu" data-tap="Slash">?</button>
     <button type="button" class="gta-pill" id="gtaFullscreen">⛶</button>
-    <button type="button" class="gta-pill gta-toggle" id="gtaPivot" title="Low-speed pivot in vehicles">Pivot</button>
+    <button type="button" class="gta-pill" id="gtaPivot" title="Low-speed pivot in vehicles">Pivot</button>
     <div id="gtaWeapons"></div>
   `;
   const rotate = document.createElement('div');
@@ -464,7 +464,7 @@
     for (const r of rows) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'gta-weapon' + (r.active ? ' is-active' : '') + (r.empty ? ' is-empty' : '');
+      b.className = 'gta-pill' + (r.active ? ' is-on' : '') + (r.empty ? ' gta-pill--dim' : '');
       b.textContent = r.label;
       b.addEventListener('pointerdown', (e) => e.preventDefault());
       b.addEventListener('pointerup', () => {
