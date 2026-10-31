@@ -35,7 +35,7 @@ The game reads input only through `keydown`/`keyup` on `document`, keyed by `eve
   want to go on screen; a per-frame controller reads the heading from `window.game` and
   presses ←/→ until the character/car faces that way (steering sign is flipped while a car
   is reversing, as the engine does). Distance from the center picks the speed:
-  `< 20px` idle · `20–90px` walk/drive · `> 90px` run. A yellow arrow on the base shows
+  `< 20px` idle · `20–110px` walk/drive · `> 110px` run (on foot; the ring is hidden in vehicles). A yellow arrow on the base shows
   the current facing. **Reverse exists only in vehicles** and is by direction, not
   distance: if the stick points into the dashed sector behind the car (beyond 130°, with
   hysteresis back to 100°) you back up toward it instead of U-turning; the knob turns red

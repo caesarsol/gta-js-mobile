@@ -53,7 +53,7 @@ canvas {
 
 /* ---- Bottom-left: fixed joystick ----
    Base is 260px (radius 130 = knob clamp). Rings mark the thresholds used by
-   mobile.js: 20px move, 90px run. Reverse is by direction, not distance. */
+   mobile.js: 20px move, 110px run. Reverse is by direction, not distance. */
 #gtaStick {
   --stick-size: 260px;
   position: absolute;
@@ -82,9 +82,13 @@ canvas {
   border-color: rgba(255, 255, 255, 0.55);
 }
 .gta-ring-run {
-  width: 180px;
-  height: 180px;
+  width: 220px;
+  height: 220px;
   border-style: dashed;
+}
+/* Run does not exist in vehicles: hide its ring there */
+#gtaStick[data-vehicle='1'] .gta-ring-run {
+  display: none;
 }
 #gtaStick[data-gear='move'] .gta-ring-move,
 #gtaStick[data-gear='run'] .gta-ring-run {

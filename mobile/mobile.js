@@ -223,7 +223,7 @@
   //
   // Distance from the center picks the speed (tune these):
   const RING_MOVE = 20; // px: beyond this → move
-  const RING_RUN = 90; // px: beyond this → run (Shift)
+  const RING_RUN = 110; // px: beyond this → run (Shift); on foot only
   const KNOB_MAX = 130; // px: knob travel clamp (visual only)
   const TURN_START = (8 * Math.PI) / 180; // start turning when off by more than this
   const TURN_STOP = (3 * Math.PI) / 180; // stop turning once within this (hysteresis)
@@ -380,6 +380,7 @@
     const deg = (-(currentHeading(pl) - Math.PI) * 180) / Math.PI;
     headingEl.style.transform = `rotate(${deg.toFixed(1)}deg)`;
     headingEl.dataset.vehicle = pl.inVehicle ? '1' : '0';
+    stick.dataset.vehicle = pl.inVehicle ? '1' : '0'; // hides the run ring in vehicles
   }
 
   (function loop() {
