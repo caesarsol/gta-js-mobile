@@ -31,9 +31,11 @@ The game reads input only through `keydown`/`keyup` on `document`, keyed by `eve
 - **Bottom-left**: fixed joystick with **absolute direction**: the stick points where you
   want to go on screen; a per-frame controller reads the heading from `window.game` and
   presses ←/→ until the character/car faces that way (steering sign is flipped while a car
-  is reversing, as the engine does). Distance from the center picks the gear:
-  `< 20px` idle · `20–70px` reverse (travel toward the stick, backwards) · `70–120px`
-  forward · `> 120px` run. Thresholds are constants at the top of `mobile.js`.
+  is reversing, as the engine does). Distance from the center picks the speed:
+  `< 20px` idle · `20–90px` walk/drive · `> 90px` run. **Reverse is by direction, not
+  distance**: if the stick points behind the current facing (beyond 130°, with hysteresis
+  back to 100°) you back up toward it instead of U-turning; the knob turns red while
+  reversing. Thresholds are constants at the top of `mobile.js`.
 - **Right**: FIRE, ENTER/EXIT, JUMP/BRAKE.
 - **Top**: weapon prev/next, `?` menu, fullscreen (+ landscape lock where supported).
 - Hidden automatically while the intro/options dialog is open or on game over.

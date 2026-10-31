@@ -52,8 +52,8 @@ canvas {
 }
 
 /* ---- Bottom-left: fixed joystick ----
-   Base is 260px (radius 130 = knob clamp). Rings mark the gear thresholds
-   used by mobile.js: 20px reverse, 70px forward, 120px run. */
+   Base is 260px (radius 130 = knob clamp). Rings mark the thresholds used by
+   mobile.js: 20px move, 90px run. Reverse is by direction, not distance. */
 #gtaStick {
   --stick-size: 260px;
   position: absolute;
@@ -76,25 +76,24 @@ canvas {
   border: 1px solid rgba(255, 255, 255, 0.35);
   transform: translate(-50%, -50%);
 }
-.gta-ring-rev {
+.gta-ring-move {
   width: 40px;
   height: 40px;
   border-color: rgba(255, 255, 255, 0.55);
 }
-.gta-ring-fwd {
-  width: 140px;
-  height: 140px;
-}
 .gta-ring-run {
-  width: 240px;
-  height: 240px;
+  width: 180px;
+  height: 180px;
   border-style: dashed;
 }
-#gtaStick[data-gear='rev'] .gta-ring-rev,
-#gtaStick[data-gear='fwd'] .gta-ring-fwd,
+#gtaStick[data-gear='move'] .gta-ring-move,
 #gtaStick[data-gear='run'] .gta-ring-run {
   border-color: #ffc400;
   border-width: 2px;
+}
+/* Knob turns red-ish while backing up, so the mode is visible under the thumb */
+#gtaStick[data-mode='rev'] #gtaStickKnob {
+  background: rgba(255, 90, 60, 0.9);
 }
 #gtaStickKnob {
   position: absolute;

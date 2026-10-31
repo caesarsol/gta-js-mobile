@@ -6,7 +6,8 @@
  * the game bundle: it synthesises KeyboardEvents from touch input.
  *
  *   Bottom-left              → fixed joystick, absolute direction of travel;
- *                              distance from center = reverse / forward / run
+ *                              distance from center = walk / run; pointing
+ *                              behind the current facing = reverse
  *   Right side               → FIRE (ControlLeft), ENTER/EXIT (Enter),
  *                              JUMP/HANDBRAKE (Space)
  *   Top                      → weapon prev/next (KeyZ/KeyX), menu (?), fullscreen
@@ -75,8 +76,7 @@
   root.innerHTML = `
     <div id="gtaStick">
       <div class="gta-ring gta-ring-run"></div>
-      <div class="gta-ring gta-ring-fwd"></div>
-      <div class="gta-ring gta-ring-rev"></div>
+      <div class="gta-ring gta-ring-move"></div>
       <div id="gtaStickKnob"></div>
     </div>
     <div id="gtaStickZone"></div>
@@ -215,13 +215,19 @@
   // frame: it reads the current heading from window.game and presses ←/→
   // until the character/car faces the right way, while holding ↑ (or ↓).
   //
-  // Distance from the center picks the gear (tune these):
-  const RING_REVERSE = 20; // px: beyond this → travel toward the stick, in reverse
-  const RING_FORWARD = 70; // px: beyond this → forward
-  const RING_RUN = 120; // px: beyond this → forward + run (Shift)
+  // Distance from the center picks the speed (tune these):
+  const RING_MOVE = 20; // px: beyond this → move
+  const RING_RUN = 90; // px: beyond this → run (Shift)
   const KNOB_MAX = 130; // px: knob travel clamp (visual only)
   const TURN_START = (8 * Math.PI) / 180; // start turning when off by more than this
   const TURN_STOP = (3 * Math.PI) / 180; // stop turning once within this (hysteresis)
+  //
+  // Reverse is decided by *where the stick points relative to the current
+  // facing*, never by distance: if the requested direction is behind you, go
+  // backwards toward it instead of U-turning. Hysteresis keeps it from
+  // flickering when the stick is sideways.
+  const REV_ENTER = (130 * Math.PI) / 180; // |angle to travel dir| above this → reverse
+  const REV_EXIT = (100 * Math.PI) / 180; // … and below this → back to forward
   //
   // Engine conventions (verified empirically on the production build):
   //   heading r = sprite.rotation.z; forward in world = (sin r, -cos r)
@@ -240,6 +246,7 @@
     stickDy = 0,
     stickDist = 0;
   let turning = 0; // -1 = pressing ArrowRight, 0 = none, +1 = pressing ArrowLeft
+  let reversing = false;
   const held = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, ShiftLeft: false };
 
   function setHeld(code, on) {
@@ -269,18 +276,24 @@
     const pl = g && g.player;
     if (stickId === null || !pl || root.hidden) return;
 
-    const gear = stickDist >= RING_RUN ? 3 : stickDist >= RING_FORWARD ? 2 : stickDist >= RING_REVERSE ? 1 : 0;
+    const gear = stickDist >= RING_RUN ? 2 : stickDist >= RING_MOVE ? 1 : 0;
     if (gear === 0) {
       for (const code of Object.keys(held)) setHeld(code, false);
       turning = 0;
+      reversing = false;
       return;
     }
 
-    const reverse = gear === 1;
-    // Direction of travel on screen → facing we need (reverse: face away from it).
+    // Direction of travel on screen → facing needed to drive forward there.
     const phi = Math.atan2(-stickDy, stickDx);
-    const target = phi + Math.PI / 2 + (reverse ? Math.PI : 0);
-    const delta = wrapAngle(target - currentHeading(pl));
+    const heading = currentHeading(pl);
+    const fwdDelta = Math.abs(wrapAngle(phi + Math.PI / 2 - heading));
+    if (!reversing && fwdDelta > REV_ENTER) reversing = true;
+    else if (reversing && fwdDelta < REV_EXIT) reversing = false;
+
+    // Reverse: face away from the travel direction and back into it.
+    const target = phi + Math.PI / 2 + (reversing ? Math.PI : 0);
+    const delta = wrapAngle(target - heading);
     const mag = Math.abs(delta);
 
     if (turning === 0 && mag > TURN_START) turning = delta > 0 ? 1 : -1;
@@ -289,9 +302,10 @@
     const inv = steerInverted(pl) ? -1 : 1;
     setHeld('ArrowLeft', turning * inv === 1);
     setHeld('ArrowRight', turning * inv === -1);
-    setHeld('ArrowUp', !reverse);
-    setHeld('ArrowDown', reverse);
-    setHeld('ShiftLeft', gear === 3);
+    setHeld('ArrowUp', !reversing);
+    setHeld('ArrowDown', reversing);
+    setHeld('ShiftLeft', gear === 2 && !reversing);
+    stick.dataset.mode = reversing ? 'rev' : 'fwd';
   }
 
   function updateStick(x, y) {
@@ -306,15 +320,17 @@
       dy = (dy / dist) * KNOB_MAX;
     }
     knob.style.transform = `translate(${dx}px, ${dy}px)`;
-    stick.dataset.gear = dist >= RING_RUN ? 'run' : dist >= RING_FORWARD ? 'fwd' : dist >= RING_REVERSE ? 'rev' : 'idle';
+    stick.dataset.gear = dist >= RING_RUN ? 'run' : dist >= RING_MOVE ? 'move' : 'idle';
   }
 
   function endStick() {
     stickId = null;
     stick.classList.remove('is-active');
     delete stick.dataset.gear;
+    delete stick.dataset.mode;
     knob.style.transform = '';
     turning = 0;
+    reversing = false;
     for (const code of Object.keys(held)) setHeld(code, false);
   }
 
