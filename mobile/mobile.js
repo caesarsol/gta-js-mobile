@@ -383,9 +383,43 @@
     stick.dataset.vehicle = pl.inVehicle ? '1' : '0'; // hides the run ring in vehicles
   }
 
+  // ---------- Experiment: low-speed pivot in vehicles ----------
+  // The engine only yaws a car in proportion to its speed, so against a wall
+  // (speed 0) steering does nothing and you are stuck. Handling profiles have
+  // a `canPivotInPlace` flag (used by the tank) that yaws even at standstill.
+  // We flip it on while the car is (nearly) stopped and restore the original
+  // value once it moves, so handling at speed is untouched.
+  const PIVOT_ON_BELOW = 20; // |vehicleSpeed| below this → pivot enabled
+  const PIVOT_OFF_ABOVE = 35; // … above this → original handling restored
+  const PIVOT_SENS_SCALE = 0.5; // pivot yaw = steeringSensitivity × 0.75 at standstill; scale it down
+  const ENABLE_PIVOT = !location.search.includes('nopivot');
+  let pivotPatched = null; // { profile, canPivotInPlace, steeringSensitivity }
+  function unpatchPivot() {
+    if (!pivotPatched) return;
+    pivotPatched.profile.canPivotInPlace = pivotPatched.canPivotInPlace;
+    pivotPatched.profile.steeringSensitivity = pivotPatched.steeringSensitivity;
+    pivotPatched = null;
+  }
+  function lowSpeedPivotTick(pl) {
+    if (!ENABLE_PIVOT) return;
+    const prof = pl.inVehicle ? pl.handlingProfile : null;
+    if (pivotPatched && pivotPatched.profile !== prof) unpatchPivot();
+    if (!prof) return;
+    const v = Math.abs(pl.vehicleSpeed ?? 0);
+    if (!pivotPatched && v < PIVOT_ON_BELOW && !prof.canPivotInPlace) {
+      pivotPatched = { profile: prof, canPivotInPlace: prof.canPivotInPlace, steeringSensitivity: prof.steeringSensitivity };
+      prof.canPivotInPlace = true;
+      prof.steeringSensitivity = prof.steeringSensitivity * PIVOT_SENS_SCALE;
+    } else if (pivotPatched && v > PIVOT_OFF_ABOVE) {
+      unpatchPivot();
+    }
+  }
+
   (function loop() {
     stickTick();
     updateHeadingIndicator();
+    const pl = window.game && window.game.player;
+    if (pl) lowSpeedPivotTick(pl);
     requestAnimationFrame(loop);
   })();
 
