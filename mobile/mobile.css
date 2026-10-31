@@ -240,11 +240,50 @@ canvas {
   background: rgba(255, 196, 0, 0.9);
   color: #000;
 }
-#gtaWeaponPrev {
-  right: calc(var(--pad-r) + 80px);
+/* Toggle pills: white when on, black when off */
+.gta-toggle {
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
 }
-#gtaWeaponNext {
-  right: calc(var(--pad-r) + 8px);
+.gta-toggle.is-on {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+#gtaPivot {
+  top: calc(var(--pad-t) + 52px);
+  left: var(--pad-l);
+}
+
+/* Weapon list, right edge under the HUD score */
+#gtaWeapons {
+  position: absolute;
+  right: var(--pad-r);
+  top: calc(var(--pad-t) + 52px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+}
+.gta-weapon {
+  pointer-events: auto;
+  touch-action: none;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font: 700 13px/1 ui-monospace, Menlo, Consolas, monospace;
+  white-space: nowrap;
+}
+.gta-weapon.is-active {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+.gta-weapon.is-empty {
+  opacity: 0.55;
 }
 #gtaMenu {
   left: 50%;
@@ -259,7 +298,7 @@ canvas {
 #gtaVersion {
   position: fixed;
   left: max(12px, env(safe-area-inset-left));
-  top: calc(max(8px, env(safe-area-inset-top)) + 50px);
+  top: calc(max(8px, env(safe-area-inset-top)) + 96px);
   z-index: 1001;
   color: rgba(255, 255, 255, 0.55);
   font: 10px/1 ui-monospace, Menlo, Consolas, monospace;

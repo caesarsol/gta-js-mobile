@@ -42,7 +42,7 @@ The game reads input only through `keydown`/`keyup` on `document`, keyed by `eve
   while reversing. On foot you always turn and walk forward. Thresholds are constants at
   the top of `mobile.js`.
 - **Right**: FIRE, ENTER/EXIT, JUMP/BRAKE.
-- **Top**: weapon prev/next, `?` menu, fullscreen (+ landscape lock where supported).
+- **Top**: `?` menu, fullscreen (+ landscape lock where supported); **Pivot** toggle on the left (white = on); on the right the list of owned weapons with ammo in parentheses, active one in white, tap to select.
 - Hidden automatically while the intro/options dialog is open or on game over.
 - Desktop: overlay is off; append `?touch` to the URL to force it.
 

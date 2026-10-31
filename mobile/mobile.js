@@ -91,10 +91,10 @@
     <button type="button" class="gta-btn gta-btn-enter" data-key="Enter" id="gtaEnter">Enter</button>
     <button type="button" class="gta-btn gta-btn-jump" data-key="Space" id="gtaJump">Jump</button>
 
-    <button type="button" class="gta-pill" id="gtaWeaponPrev" data-tap="KeyZ">&lt; W</button>
-    <button type="button" class="gta-pill" id="gtaWeaponNext" data-tap="KeyX">W &gt;</button>
     <button type="button" class="gta-pill" id="gtaMenu" data-tap="Slash">?</button>
     <button type="button" class="gta-pill" id="gtaFullscreen">⛶</button>
+    <button type="button" class="gta-pill gta-toggle" id="gtaPivot" title="Low-speed pivot in vehicles">Pivot</button>
+    <div id="gtaWeapons"></div>
   `;
   const rotate = document.createElement('div');
   rotate.id = 'gtaRotate';
@@ -392,8 +392,26 @@
   const PIVOT_ON_BELOW = 20; // |vehicleSpeed| below this → pivot enabled
   const PIVOT_OFF_ABOVE = 35; // … above this → original handling restored
   const PIVOT_SENS_SCALE = 0.5; // pivot yaw = steeringSensitivity × 0.75 at standstill; scale it down
-  const ENABLE_PIVOT = !location.search.includes('nopivot');
+  const PIVOT_KEY = 'gtajs-mobile:pivot';
+  let pivotEnabled = (() => {
+    if (location.search.includes('nopivot')) return false;
+    try { return localStorage.getItem(PIVOT_KEY) !== '0'; } catch { return true; }
+  })();
   let pivotPatched = null; // { profile, canPivotInPlace, steeringSensitivity }
+
+  const pivotBtn = root.querySelector('#gtaPivot');
+  function renderPivotBtn() {
+    pivotBtn.classList.toggle('is-on', pivotEnabled);
+    pivotBtn.setAttribute('aria-pressed', String(pivotEnabled));
+  }
+  renderPivotBtn();
+  pivotBtn.addEventListener('pointerdown', (e) => e.preventDefault());
+  pivotBtn.addEventListener('pointerup', () => {
+    pivotEnabled = !pivotEnabled;
+    try { localStorage.setItem(PIVOT_KEY, pivotEnabled ? '1' : '0'); } catch { /* ignore */ }
+    if (!pivotEnabled) unpatchPivot();
+    renderPivotBtn();
+  });
   function unpatchPivot() {
     if (!pivotPatched) return;
     pivotPatched.profile.canPivotInPlace = pivotPatched.canPivotInPlace;
@@ -401,7 +419,7 @@
     pivotPatched = null;
   }
   function lowSpeedPivotTick(pl) {
-    if (!ENABLE_PIVOT) return;
+    if (!pivotEnabled) return;
     const prof = pl.inVehicle ? pl.handlingProfile : null;
     if (pivotPatched && pivotPatched.profile !== prof) unpatchPivot();
     if (!prof) return;
@@ -423,6 +441,40 @@
     requestAnimationFrame(loop);
   })();
 
+  // ---------- Weapon list (right side) ----------
+  // Shows the weapons you own; the active one is white. Ammo in parentheses
+  // (∞ during a Kill Frenzy). Tap a row to select it.
+  const WEAPON_NAMES = ['Fist', 'Pistol', 'Machine Gun', 'Rocket Launcher', 'Flamethrower'];
+  const weaponsEl = root.querySelector('#gtaWeapons');
+  let weaponsSig = '';
+  function syncWeapons(pl) {
+    const frenzy = !!pl.killFrenzyActive;
+    const rows = [];
+    for (let i = 0; i < WEAPON_NAMES.length; i++) {
+      const owned = i === 0 || (frenzy && i === 2) || (pl.ammo && (pl.ammo[i] ?? -1) >= 0);
+      if (!owned) continue;
+      let detail = '';
+      if (i > 0) detail = frenzy && i === 2 ? ' (∞)' : ` (${pl.ammo[i]})`;
+      rows.push({ i, label: WEAPON_NAMES[i] + detail, active: pl.weapon === i, empty: i > 0 && !frenzy && pl.ammo[i] === 0 });
+    }
+    const sig = rows.map((r) => `${r.i}:${r.label}:${r.active}:${r.empty}`).join('|');
+    if (sig === weaponsSig) return;
+    weaponsSig = sig;
+    weaponsEl.innerHTML = '';
+    for (const r of rows) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'gta-weapon' + (r.active ? ' is-active' : '') + (r.empty ? ' is-empty' : '');
+      b.textContent = r.label;
+      b.addEventListener('pointerdown', (e) => e.preventDefault());
+      b.addEventListener('pointerup', () => {
+        const p2 = window.game && window.game.player;
+        if (p2) p2.selectWeapon(r.i);
+      });
+      weaponsEl.appendChild(b);
+    }
+  }
+
   // ---------- Visibility / game state sync ----------
   const enterBtn = root.querySelector('#gtaEnter');
   const jumpBtn = root.querySelector('#gtaJump');
@@ -440,6 +492,7 @@
       root.hidden = hide;
       if (hide) releaseAll();
     }
+    if (g.player && !hide) syncWeapons(g.player);
     const inVehicle = !!(g.player && g.player.inVehicle);
     if (inVehicle !== lastInVehicle) {
       lastInVehicle = inVehicle;
