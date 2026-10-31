@@ -292,6 +292,7 @@ canvas {
 /* Generic modal panel (tune panel; the load menu shares the look) */
 .gta-panel {
   position: absolute;
+  z-index: 10; /* above every other overlay control */
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -398,7 +399,7 @@ canvas {
 }
 #gtaReload {
   position: fixed;
-  z-index: 1001;
+  z-index: 999; /* below #gtaMobile (1000) so panels cover it */
   top: max(8px, env(safe-area-inset-top));
   left: 50%;
   transform: translateX(calc(-50% + 108px));
@@ -435,6 +436,7 @@ canvas {
 }
 #gtaLoadMenu {
   position: absolute;
+  z-index: 10;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
