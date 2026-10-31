@@ -1,0 +1,192 @@
+/* GTA.js mobile overlay — v1 (floating joystick + button cluster) */
+
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#gtaMobile {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  touch-action: none;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  color: #fff;
+  --pad-b: max(12px, env(safe-area-inset-bottom));
+  --pad-l: max(12px, env(safe-area-inset-left));
+  --pad-r: max(12px, env(safe-area-inset-right));
+  --pad-t: max(8px, env(safe-area-inset-top));
+}
+#gtaMobile[hidden] {
+  display: none;
+}
+
+/* ---- Left half: joystick touch zone ---- */
+#gtaStickZone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  pointer-events: auto;
+  touch-action: none;
+}
+#gtaStick {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  margin: -70px 0 0 -70px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  display: none;
+  pointer-events: none;
+}
+#gtaStick.is-active {
+  display: block;
+}
+#gtaStickKnob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border-radius: 50%;
+  background: rgba(255, 196, 0, 0.85);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.35);
+  will-change: transform;
+}
+/* Resting hint when no touch */
+#gtaStickHint {
+  position: absolute;
+  left: calc(var(--pad-l) + 40px);
+  bottom: calc(var(--pad-b) + 40px);
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+#gtaStickZone.is-touching + #gtaStickHint {
+  opacity: 0;
+}
+
+/* ---- Right side: buttons ---- */
+.gta-btn {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font: 700 12px/1 ui-monospace, Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.gta-btn.is-down {
+  background: rgba(255, 196, 0, 0.9);
+  color: #000;
+  border-color: #ffc400;
+}
+.gta-btn-fire {
+  right: calc(var(--pad-r) + 10px);
+  bottom: calc(var(--pad-b) + 64px);
+  width: 92px;
+  height: 92px;
+  font-size: 15px;
+  border-color: rgba(255, 80, 60, 0.7);
+}
+.gta-btn-enter {
+  right: calc(var(--pad-r) + 112px);
+  bottom: calc(var(--pad-b) + 10px);
+  width: 72px;
+  height: 72px;
+}
+.gta-btn-jump {
+  right: calc(var(--pad-r) + 118px);
+  bottom: calc(var(--pad-b) + 98px);
+  width: 72px;
+  height: 72px;
+}
+.gta-btn-run {
+  right: calc(var(--pad-r) + 10px);
+  bottom: calc(var(--pad-b) + 0px);
+  width: 56px;
+  height: 56px;
+  font-size: 11px;
+}
+.gta-btn-run.is-locked {
+  border-color: #ffc400;
+  color: #ffc400;
+}
+
+/* ---- Top bar: small pills ---- */
+.gta-pill {
+  position: absolute;
+  top: var(--pad-t);
+  pointer-events: auto;
+  touch-action: none;
+  min-width: 40px;
+  height: 32px;
+  padding: 0 10px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font: 700 12px/1 ui-monospace, Menlo, Consolas, monospace;
+}
+.gta-pill.is-down {
+  background: rgba(255, 196, 0, 0.9);
+  color: #000;
+}
+#gtaWeaponPrev {
+  right: calc(var(--pad-r) + 64px);
+}
+#gtaWeaponNext {
+  right: calc(var(--pad-r) + 8px);
+}
+#gtaMenu {
+  left: 50%;
+  transform: translateX(-50%);
+}
+#gtaFullscreen {
+  left: 50%;
+  transform: translateX(calc(-50% + 64px));
+}
+
+/* ---- Portrait: ask to rotate ---- */
+#gtaRotate {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: none;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.92);
+  color: #ffc400;
+  font: 700 18px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  text-align: center;
+  padding: 24px;
+  pointer-events: auto;
+}
+@media (orientation: portrait) and (pointer: coarse) {
+  #gtaRotate {
+    display: grid;
+  }
+}
