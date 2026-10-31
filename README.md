@@ -18,7 +18,8 @@ Personal, unlisted test bed for adding **touch controls** to [GTA.js](https://gt
 | `index.html` | The `/play` page from gtajs.wtf with relative asset paths + our overlay |
 | `assets/` | Mirrored build (`play-*.js`, `play-*.css`, polyfill, screenshot) |
 | `sw.js` | Mirrored service worker (serves cached game data) |
-| `mobile/mobile.js`, `mobile/mobile.css` | **Our touch overlay** — the only thing being developed here |
+| `mobile/mobile.js`, `mobile/mobile.css` | **Our touch overlay** |
+| `mobile/save.js` | **Save / load** (manual slot + autosave, see below) |
 | `scripts/mirror.sh` | Re-mirror the latest build from gtajs.wtf and update `index.html` |
 
 ## How the overlay works
@@ -40,6 +41,21 @@ The game reads input only through `keydown`/`keyup` on `document`, keyed by `eve
 - **Top**: weapon prev/next, `?` menu, fullscreen (+ landscape lock where supported).
 - Hidden automatically while the intro/options dialog is open or on game over.
 - Desktop: overlay is off; append `?touch` to the URL to force it.
+
+## Save / load
+
+Userspace, through `window.game` — the bundle is not patched. Pills **SAVE** / **LOAD**
+top-left; autosave every 30 s and when the tab is hidden; a "Resume?" toast on start.
+
+- **Always**: position + heading, weapons/ammo, score/lives/multiplier/armor/jail key/
+  wanted level, vehicle model if driving (respawned next to you; you load on foot).
+- **Between missions** (experimental): `MISSION.INI` engine state — processes, trigger
+  flags, counters, collected/destroyed sets, phones, doors, completed count. Captured
+  only when no mission entity is alive (peds, timer, kill frenzy, pending vehicles);
+  otherwise the save is player-only and the toast says so. The load menu also offers
+  "Player only" for any slot.
+- Saves are keyed by the bundle hash: after re-mirroring a new build, old saves are
+  ignored rather than loaded into an incompatible engine.
 
 ## Deploy (GitHub Pages)
 
