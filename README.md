@@ -28,8 +28,13 @@ The game reads input only through `keydown`/`keyup` on `document`, keyed by `eve
 `Enter` enter/exit vehicle, `KeyZ`/`KeyX` weapons, `?` menu). `mobile.js` dispatches synthetic
 `KeyboardEvent`s from touch input and never patches the bundle.
 
-- **Left half**: floating 8-way digital joystick (tank controls, with hysteresis).
-- **Right**: FIRE, ENTER/EXIT, JUMP/BRAKE, RUN (long-press to lock).
+- **Bottom-left**: fixed joystick with **absolute direction**: the stick points where you
+  want to go on screen; a per-frame controller reads the heading from `window.game` and
+  presses ←/→ until the character/car faces that way (steering sign is flipped while a car
+  is reversing, as the engine does). Distance from the center picks the gear:
+  `< 20px` idle · `20–70px` reverse (travel toward the stick, backwards) · `70–120px`
+  forward · `> 120px` run. Thresholds are constants at the top of `mobile.js`.
+- **Right**: FIRE, ENTER/EXIT, JUMP/BRAKE.
 - **Top**: weapon prev/next, `?` menu, fullscreen (+ landscape lock where supported).
 - Hidden automatically while the intro/options dialog is open or on game over.
 - Desktop: overlay is off; append `?touch` to the URL to force it.

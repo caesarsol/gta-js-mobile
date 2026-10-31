@@ -26,59 +26,73 @@ body {
   display: none;
 }
 
-/* ---- Left half: joystick touch zone ---- */
-#gtaStickZone {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 50%;
-  pointer-events: auto;
-  touch-action: none;
-}
+/* ---- Bottom-left: fixed joystick ----
+   Base is 260px (radius 130 = knob clamp). Rings mark the gear thresholds
+   used by mobile.js: 20px reverse, 70px forward, 120px run. */
 #gtaStick {
+  --stick-size: 260px;
   position: absolute;
-  width: 140px;
-  height: 140px;
-  margin: -70px 0 0 -70px;
+  left: calc(var(--pad-l) + 10px);
+  bottom: calc(var(--pad-b) + 4px);
+  width: var(--stick-size);
+  height: var(--stick-size);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  display: none;
+  background: rgba(0, 0, 0, 0.18);
   pointer-events: none;
 }
 #gtaStick.is-active {
-  display: block;
+  background: rgba(0, 0, 0, 0.3);
+}
+.gta-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  transform: translate(-50%, -50%);
+}
+.gta-ring-rev {
+  width: 40px;
+  height: 40px;
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.gta-ring-fwd {
+  width: 140px;
+  height: 140px;
+}
+.gta-ring-run {
+  width: 240px;
+  height: 240px;
+  border-style: dashed;
+}
+#gtaStick[data-gear='rev'] .gta-ring-rev,
+#gtaStick[data-gear='fwd'] .gta-ring-fwd,
+#gtaStick[data-gear='run'] .gta-ring-run {
+  border-color: #ffc400;
+  border-width: 2px;
 }
 #gtaStickKnob {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 60px;
-  height: 60px;
-  margin: -30px 0 0 -30px;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
   border-radius: 50%;
   background: rgba(255, 196, 0, 0.85);
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.35);
   will-change: transform;
 }
-/* Resting hint when no touch */
-#gtaStickHint {
+/* Touch zone: a bit larger than the base so a sloppy thumb still engages it */
+#gtaStickZone {
   position: absolute;
-  left: calc(var(--pad-l) + 40px);
-  bottom: calc(var(--pad-b) + 40px);
-  width: 120px;
-  height: 120px;
+  left: calc(var(--pad-l) + 10px - 40px);
+  bottom: calc(var(--pad-b) + 4px - 40px);
+  width: 340px;
+  height: 340px;
   border-radius: 50%;
-  border: 2px dashed rgba(255, 255, 255, 0.25);
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
-  pointer-events: none;
-}
-#gtaStickZone.is-touching + #gtaStickHint {
-  opacity: 0;
+  pointer-events: auto;
+  touch-action: none;
 }
 
 /* ---- Right side: buttons ---- */
@@ -123,18 +137,6 @@ body {
   width: 72px;
   height: 72px;
 }
-.gta-btn-run {
-  right: calc(var(--pad-r) + 10px);
-  bottom: calc(var(--pad-b) + 0px);
-  width: 56px;
-  height: 56px;
-  font-size: 11px;
-}
-.gta-btn-run.is-locked {
-  border-color: #ffc400;
-  color: #ffc400;
-}
-
 /* ---- Top bar: small pills ---- */
 .gta-pill {
   position: absolute;

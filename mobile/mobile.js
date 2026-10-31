@@ -5,10 +5,10 @@
  * listeners on `document`, keyed by `event.code`. This overlay never touches
  * the game bundle: it synthesises KeyboardEvents from touch input.
  *
- *   Left half of the screen  → floating 8-way digital joystick (tank controls:
- *                              ←/→ rotate, ↑ forward, ↓ reverse)
+ *   Bottom-left              → fixed joystick, absolute direction of travel;
+ *                              distance from center = reverse / forward / run
  *   Right side               → FIRE (ControlLeft), ENTER/EXIT (Enter),
- *                              JUMP/HANDBRAKE (Space), RUN (ShiftLeft, lockable)
+ *                              JUMP/HANDBRAKE (Space)
  *   Top                      → weapon prev/next (KeyZ/KeyX), menu (?), fullscreen
  *
  * The overlay hides itself while the intro/options dialogs are open or the
@@ -73,15 +73,17 @@
   const root = document.createElement('div');
   root.id = 'gtaMobile';
   root.innerHTML = `
-    <div id="gtaStickZone">
-      <div id="gtaStick"><div id="gtaStickKnob"></div></div>
+    <div id="gtaStick">
+      <div class="gta-ring gta-ring-run"></div>
+      <div class="gta-ring gta-ring-fwd"></div>
+      <div class="gta-ring gta-ring-rev"></div>
+      <div id="gtaStickKnob"></div>
     </div>
-    <div id="gtaStickHint">MOVE</div>
+    <div id="gtaStickZone"></div>
 
     <button type="button" class="gta-btn gta-btn-fire" data-key="ControlLeft">Fire</button>
     <button type="button" class="gta-btn gta-btn-enter" data-key="Enter" id="gtaEnter">Enter</button>
     <button type="button" class="gta-btn gta-btn-jump" data-key="Space" id="gtaJump">Jump</button>
-    <button type="button" class="gta-btn gta-btn-run" data-key="ShiftLeft" data-lockable id="gtaRun">Run</button>
 
     <button type="button" class="gta-pill" id="gtaWeaponPrev" data-tap="KeyZ">&lt; W</button>
     <button type="button" class="gta-pill" id="gtaWeaponNext" data-tap="KeyX">W &gt;</button>
@@ -167,59 +169,120 @@
     }
   });
 
-  // ---------- Floating joystick ----------
+  // ---------- Fixed joystick, absolute direction ----------
+  //
+  // The stick direction is the *direction of travel on screen*. The game only
+  // has tank controls (←/→ rotate, ↑/↓ move), so a small controller runs every
+  // frame: it reads the current heading from window.game and presses ←/→
+  // until the character/car faces the right way, while holding ↑ (or ↓).
+  //
+  // Distance from the center picks the gear (tune these):
+  const RING_REVERSE = 20; // px: beyond this → travel toward the stick, in reverse
+  const RING_FORWARD = 70; // px: beyond this → forward
+  const RING_RUN = 120; // px: beyond this → forward + run (Shift)
+  const KNOB_MAX = 130; // px: knob travel clamp (visual only)
+  const TURN_START = (8 * Math.PI) / 180; // start turning when off by more than this
+  const TURN_STOP = (3 * Math.PI) / 180; // stop turning once within this (hysteresis)
+  //
+  // Engine conventions (verified empirically on the production build):
+  //   heading r = sprite.rotation.z; forward in world = (sin r, -cos r)
+  //   camera is top-down and axis-aligned: screen-right = +x, screen-up = +y
+  //   → screen angle φ = atan2(-dy, dx) (CSS y is down) and r = φ + π/2
+  //   ArrowLeft increases r; in a *reversing car* steering is inverted.
+
   const zone = root.querySelector('#gtaStickZone');
   const stick = root.querySelector('#gtaStick');
   const knob = root.querySelector('#gtaStickKnob');
-  const RADIUS = 70; // px, matches CSS
-  const ENTER = 0.35; // fraction of radius to engage a direction
-  const EXIT = 0.2; // fraction to disengage (hysteresis)
-  const AXIS_BIAS = 0.45; // diagonal tolerance (tan of half-angle-ish)
 
   let stickId = null;
   let cx = 0,
     cy = 0;
-  const axis = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+  let stickDx = 0,
+    stickDy = 0,
+    stickDist = 0;
+  let turning = 0; // -1 = pressing ArrowRight, 0 = none, +1 = pressing ArrowLeft
+  const held = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, ShiftLeft: false };
 
-  function setAxis(code, on) {
-    if (axis[code] === on) return;
-    axis[code] = on;
+  function setHeld(code, on) {
+    if (held[code] === on) return;
+    held[code] = on;
     on ? press(code) : release(code);
+  }
+
+  function wrapAngle(a) {
+    return Math.atan2(Math.sin(a), Math.cos(a));
+  }
+
+  function currentHeading(pl) {
+    if (pl.inVehicle && pl.currentVehicle && pl.currentVehicle.sprite) return pl.currentVehicle.sprite.rotation.z;
+    return pl.spriteMesh ? pl.spriteMesh.rotation.z : 0;
+  }
+
+  function steerInverted(pl) {
+    // Mirrors the game's `isReversing` flag used to flip the steering sign.
+    if (!pl.inVehicle) return false;
+    const v = pl.vehicleSpeed ?? 0;
+    return v < -1 || (v <= 0.5 && !!pl.moveBackward);
+  }
+
+  function stickTick() {
+    const g = window.game;
+    const pl = g && g.player;
+    if (stickId === null || !pl || root.hidden) return;
+
+    const gear = stickDist >= RING_RUN ? 3 : stickDist >= RING_FORWARD ? 2 : stickDist >= RING_REVERSE ? 1 : 0;
+    if (gear === 0) {
+      for (const code of Object.keys(held)) setHeld(code, false);
+      turning = 0;
+      return;
+    }
+
+    const reverse = gear === 1;
+    // Direction of travel on screen → facing we need (reverse: face away from it).
+    const phi = Math.atan2(-stickDy, stickDx);
+    const target = phi + Math.PI / 2 + (reverse ? Math.PI : 0);
+    const delta = wrapAngle(target - currentHeading(pl));
+    const mag = Math.abs(delta);
+
+    if (turning === 0 && mag > TURN_START) turning = delta > 0 ? 1 : -1;
+    else if (turning !== 0 && (mag < TURN_STOP || Math.sign(delta) !== turning)) turning = 0;
+
+    const inv = steerInverted(pl) ? -1 : 1;
+    setHeld('ArrowLeft', turning * inv === 1);
+    setHeld('ArrowRight', turning * inv === -1);
+    setHeld('ArrowUp', !reverse);
+    setHeld('ArrowDown', reverse);
+    setHeld('ShiftLeft', gear === 3);
   }
 
   function updateStick(x, y) {
     let dx = x - cx;
     let dy = y - cy;
     const dist = Math.hypot(dx, dy);
-    if (dist > RADIUS) {
-      dx = (dx / dist) * RADIUS;
-      dy = (dy / dist) * RADIUS;
+    stickDx = dx;
+    stickDy = dy;
+    stickDist = dist;
+    if (dist > KNOB_MAX) {
+      dx = (dx / dist) * KNOB_MAX;
+      dy = (dy / dist) * KNOB_MAX;
     }
     knob.style.transform = `translate(${dx}px, ${dy}px)`;
-
-    const nx = dx / RADIUS;
-    const ny = dy / RADIUS;
-    const mag = Math.min(1, dist / RADIUS);
-
-    // Decide per-axis with hysteresis. A direction engages when its component
-    // exceeds ENTER and dominates the other axis enough (AXIS_BIAS) to allow
-    // diagonals without accidental taps on the orthogonal axis.
-    const want = (comp, other, current) => {
-      const thr = current ? EXIT : ENTER;
-      return comp > thr && comp > other * AXIS_BIAS && mag > (current ? EXIT : ENTER);
-    };
-    setAxis('ArrowUp', want(-ny, Math.abs(nx), axis.ArrowUp));
-    setAxis('ArrowDown', want(ny, Math.abs(nx), axis.ArrowDown));
-    setAxis('ArrowLeft', want(-nx, Math.abs(ny), axis.ArrowLeft));
-    setAxis('ArrowRight', want(nx, Math.abs(ny), axis.ArrowRight));
+    stick.dataset.gear = dist >= RING_RUN ? 'run' : dist >= RING_FORWARD ? 'fwd' : dist >= RING_REVERSE ? 'rev' : 'idle';
   }
 
   function endStick() {
     stickId = null;
     stick.classList.remove('is-active');
-    zone.classList.remove('is-touching');
+    delete stick.dataset.gear;
     knob.style.transform = '';
-    for (const code of Object.keys(axis)) setAxis(code, false);
+    turning = 0;
+    for (const code of Object.keys(held)) setHeld(code, false);
+  }
+
+  function stickCenter() {
+    const r = stick.getBoundingClientRect();
+    cx = r.left + r.width / 2;
+    cy = r.top + r.height / 2;
   }
 
   zone.addEventListener('pointerdown', (e) => {
@@ -227,13 +290,9 @@
     e.preventDefault();
     stickId = e.pointerId;
     zone.setPointerCapture(e.pointerId);
-    cx = e.clientX;
-    cy = e.clientY;
-    stick.style.left = `${cx}px`;
-    stick.style.top = `${cy}px`;
+    stickCenter();
     stick.classList.add('is-active');
-    zone.classList.add('is-touching');
-    updateStick(cx, cy);
+    updateStick(e.clientX, e.clientY);
   });
   zone.addEventListener('pointermove', (e) => {
     if (e.pointerId !== stickId) return;
@@ -246,6 +305,11 @@
   };
   zone.addEventListener('pointerup', stickUp);
   zone.addEventListener('pointercancel', stickUp);
+
+  (function loop() {
+    stickTick();
+    requestAnimationFrame(loop);
+  })();
 
   // ---------- Visibility / game state sync ----------
   const enterBtn = root.querySelector('#gtaEnter');
