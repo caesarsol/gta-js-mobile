@@ -499,22 +499,3 @@ canvas {
   margin-top: 12px;
 }
 
-/* ---- Portrait: ask to rotate ---- */
-#gtaRotate {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  display: none;
-  place-items: center;
-  background: rgba(0, 0, 0, 0.92);
-  color: #ffc400;
-  font: 700 18px/1.4 ui-monospace, Menlo, Consolas, monospace;
-  text-align: center;
-  padding: 24px;
-  pointer-events: auto;
-}
-@media (orientation: portrait) and (pointer: coarse) {
-  #gtaRotate {
-    display: grid;
-  }
-}

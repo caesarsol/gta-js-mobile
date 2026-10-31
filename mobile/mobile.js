@@ -121,14 +121,7 @@
       </div>
     </div>
   `;
-  const rotate = document.createElement('div');
-  rotate.id = 'gtaRotate';
-  rotate.textContent = 'Ruota il telefono in orizzontale ↻';
-
-  const mount = () => {
-    document.body.appendChild(root);
-    document.body.appendChild(rotate);
-  };
+  const mount = () => document.body.appendChild(root);
   if (document.body) mount();
   else document.addEventListener('DOMContentLoaded', mount);
 
