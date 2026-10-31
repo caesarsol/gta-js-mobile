@@ -61,7 +61,12 @@ padding, never fixed width/height. Keep the reset on the component classes, not 
 - The game's `<dialog closedby="any">` light-dismisses on a click/pointer sequence outside
   it: act on `pointerup` deferred with `setTimeout(…, 0)`. We cancel `touchstart` on the game
   surface, so **no `click` is synthesised** on the overlay — use pointer events.
-- Audio needs a user gesture; the engine re-arms unlock on first pointerdown.
+- Audio needs a user gesture. The engine's own retry is a **one-shot** on `pointerdown`/`keydown`;
+  iOS does not count touch `pointerdown` as a gesture and we cancel `touchstart` (no `click`), so
+  with autostart the context would stay suspended forever. The **Sound pill** (default off)
+  unlocks on its `pointerup`; a saved-on state resumes on the next `touchend`/`pointerup`/`keydown`.
+  iOS also mutes Web Audio with the ringer switch unless an `<audio>` element is playing →
+  we loop `mobile/silence.wav` while sound is on.
 
 ## Testing (headless)
 

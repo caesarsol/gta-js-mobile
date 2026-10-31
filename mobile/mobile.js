@@ -95,6 +95,7 @@
     <button type="button" class="gta-pill" id="gtaFullscreen">⛶</button>
     <button type="button" class="gta-pill" id="gtaPivot" title="Low-speed pivot in vehicles">Pivot</button>
     <button type="button" class="gta-pill" id="gtaTune" title="Tune controls">Tune</button>
+    <button type="button" class="gta-pill" id="gtaSound" title="Sound on/off">Sound</button>
     <div id="gtaWeapons"></div>
     <div id="gtaTunePanel" class="gta-panel" hidden>
       <div class="gta-panel-title">Tune controls</div>
@@ -544,6 +545,62 @@
     requestAnimationFrame(loop);
   })();
 
+  // ---------- Sound pill (default off) ----------
+  // Browsers only start audio inside a user gesture, and autostart.js presses
+  // PLAY programmatically, so the engine's AudioContext stays suspended (its
+  // own retry is a one-shot on pointerdown, which iOS does not count as a
+  // gesture). The pill's pointerup is a real gesture: unlock + unmute there.
+  // A looping silent <audio> makes iOS treat the page as "playing media" so
+  // Web Audio is not killed by the ringer/silent switch.
+  const SOUND_KEY = 'gtajs-mobile:sound';
+  let soundOn = (() => { try { return localStorage.getItem(SOUND_KEY) === '1'; } catch { return false; } })();
+  const soundBtn = root.querySelector('#gtaSound');
+  const silence = new Audio('mobile/silence.wav');
+  silence.loop = true;
+  silence.volume = 0.05;
+  silence.setAttribute('playsinline', '');
+  silence.preload = 'auto';
+
+  const soundManager = () => window.game && window.game.soundManager;
+  const audioRunning = () => { const sm = soundManager(); return !!(sm && sm.audioContext && sm.audioContext.state === 'running'); };
+  let soundApplied = false;
+  function applySound(fromGesture) {
+    const sm = soundManager();
+    if (!sm) return;
+    soundApplied = true;
+    if (soundOn) {
+      if (fromGesture) {
+        try { sm.unlockAudio(); } catch { /* ignore */ }
+        if (sm.audioContext && sm.audioContext.state !== 'running') sm.audioContext.resume().catch(() => {});
+        silence.play().catch(() => {});
+      }
+      sm.setMuted(false);
+    } else {
+      sm.setMuted(true);
+      silence.pause();
+    }
+    renderSoundBtn();
+  }
+  function renderSoundBtn() {
+    soundBtn.classList.toggle('is-on', soundOn);
+    soundBtn.textContent = soundOn && !audioRunning() ? 'Sound (tap)' : 'Sound';
+  }
+  renderSoundBtn();
+  soundBtn.addEventListener('pointerdown', (e) => e.preventDefault());
+  soundBtn.addEventListener('pointerup', () => {
+    soundOn = !soundOn;
+    try { localStorage.setItem(SOUND_KEY, soundOn ? '1' : '0'); } catch { /* ignore */ }
+    applySound(true);
+  });
+  // Sound saved as "on" from a previous visit: it can only resume inside a
+  // gesture, so finish the job on the next touch/key anywhere.
+  const resumeOnGesture = () => { if (soundOn && !audioRunning()) applySound(true); };
+  for (const type of ['touchend', 'pointerup', 'keydown']) window.addEventListener(type, resumeOnGesture, true);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) silence.pause();
+    else if (soundOn) silence.play().catch(() => {});
+  });
+
   // ---------- Weapon list (right side) ----------
   // Shows the weapons you own; the active one is white. Ammo in parentheses
   // (∞ during a Kill Frenzy). Tap a row to select it.
@@ -596,6 +653,8 @@
       if (hide) releaseAll();
     }
     if (g.player && !hide) syncWeapons(g.player);
+    if (!soundApplied && g.soundManager) applySound(false); // default: muted until the pill is tapped
+    if (soundOn && soundBtn.textContent !== (audioRunning() ? 'Sound' : 'Sound (tap)')) renderSoundBtn();
     const inVehicle = !!(g.player && g.player.inVehicle);
     if (inVehicle !== lastInVehicle) {
       lastInVehicle = inVehicle;

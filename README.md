@@ -44,7 +44,7 @@ The game reads input only through `keydown`/`keyup` on `document`, keyed by `eve
 - **Right**: FIRE, ENTER/EXIT, JUMP (on foot only). In vehicles the **handbrake** is pulled by
   holding the finger inside the stick's centre ring for `hbDelay` ms (default 500); the ring
   turns red.
-- **Top**: `?` menu, fullscreen (+ landscape lock where supported); **Pivot** toggle on the left (white = on) and a **Tune** panel with −/+ steppers for every control parameter (rings, turn hysteresis, reverse sector, handbrake radius/delay, pivot speeds/sensitivity), persisted in LocalStorage; on the right the list of owned weapons with ammo in parentheses, active one in white, tap to select.
+- **Top**: `?` menu, fullscreen (+ landscape lock where supported); on the left **Pivot** toggle (white = on), a **Tune** panel with −/+ steppers for every control parameter (rings, turn hysteresis, reverse sector, handbrake radius/delay, pivot speeds/sensitivity), persisted in LocalStorage, and a **Sound** pill (default off: tapping it is the user gesture that unlocks the engine's AudioContext; it also loops a silent `mobile/silence.wav` so iOS keeps Web Audio alive with the ringer switch on silent); on the right the list of owned weapons with ammo in parentheses, active one in white, tap to select.
 - Hidden automatically while the intro/options dialog is open or on game over.
 - Desktop: overlay is off; append `?touch` to the URL to force it.
 

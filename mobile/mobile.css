@@ -276,6 +276,7 @@ canvas {
 #gtaLoadBtn,
 #gtaPivot,
 #gtaTune,
+#gtaSound,
 #gtaReload {
   position: absolute;
   top: var(--pad-t);
@@ -286,6 +287,10 @@ canvas {
 }
 #gtaTune {
   top: calc(var(--pad-t) + 104px);
+  left: var(--pad-l);
+}
+#gtaSound {
+  top: calc(var(--pad-t) + 156px);
   left: var(--pad-l);
 }
 
@@ -391,7 +396,7 @@ canvas {
 #gtaVersion {
   position: fixed;
   left: max(12px, env(safe-area-inset-left));
-  top: calc(max(8px, env(safe-area-inset-top)) + 150px);
+  top: calc(max(8px, env(safe-area-inset-top)) + 204px);
   z-index: 1001;
   color: rgba(255, 255, 255, 0.55);
   font: 10px/1 ui-monospace, Menlo, Consolas, monospace;
