@@ -107,7 +107,8 @@
     const hud = g.hud;
     const me = g.missionEngine;
     const inVehicle = !!(pl.inVehicle && pl.currentVehicle);
-    const carIndex = inVehicle && g.styleData && pl.currentCarDef ? g.styleData.cars.indexOf(pl.currentCarDef) : -1;
+    // styleData.cars is an object keyed by model index; the vehicle carries its model in `type`.
+    const carIndex = inVehicle && Number.isInteger(pl.currentVehicle.type) ? pl.currentVehicle.type : -1;
     const ammo = {};
     for (const k of AMMO_SLOTS) ammo[k] = pl.ammo ? pl.ammo[k] ?? -1 : -1;
 
