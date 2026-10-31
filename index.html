@@ -20,10 +20,9 @@
     <script type="module" crossorigin src="./assets/play-ChdjYFLA.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-P2Xu9kJm.js" />
     <link rel="stylesheet" crossorigin href="./assets/play-CHCsg37u.css" />
-    <!-- Mobile overlay (ours) -->
-    <link rel="stylesheet" href="./mobile/mobile.css" />
-    <script defer src="./mobile/mobile.js"></script>
-    <script defer src="./mobile/save.js"></script>
+    <!-- Mobile overlay (ours): boot.js loads mobile.css / mobile.js / save.js
+         with a per-load cache-busting query string. -->
+    <script src="./mobile/boot.js?v=1"></script>
   </head>
   <body></body>
 </html>

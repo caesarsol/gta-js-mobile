@@ -77,6 +77,12 @@
     <div id="gtaStick">
       <div class="gta-ring gta-ring-run"></div>
       <div class="gta-ring gta-ring-move"></div>
+      <div id="gtaHeading">
+        <div class="gta-rev-sector"></div>
+        <div class="gta-rev-line gta-rev-line-a"></div>
+        <div class="gta-rev-line gta-rev-line-b"></div>
+        <div class="gta-heading-arrow"></div>
+      </div>
       <div id="gtaStickKnob"></div>
     </div>
     <div id="gtaStickZone"></div>
@@ -288,7 +294,9 @@
     const phi = Math.atan2(-stickDy, stickDx);
     const heading = currentHeading(pl);
     const fwdDelta = Math.abs(wrapAngle(phi + Math.PI / 2 - heading));
-    if (!reversing && fwdDelta > REV_ENTER) reversing = true;
+    // Reverse exists only in vehicles; on foot you always turn and walk forward.
+    if (!pl.inVehicle) reversing = false;
+    else if (!reversing && fwdDelta > REV_ENTER) reversing = true;
     else if (reversing && fwdDelta < REV_EXIT) reversing = false;
 
     // Reverse: face away from the travel direction and back into it.
@@ -361,8 +369,22 @@
   zone.addEventListener('pointerup', stickUp);
   zone.addEventListener('pointercancel', stickUp);
 
+  // Heading indicator: an arrow showing the current facing on screen, plus
+  // (in vehicles) the dashed sector behind you where the stick triggers reverse.
+  const headingEl = root.querySelector('#gtaHeading');
+  function updateHeadingIndicator() {
+    const g = window.game;
+    const pl = g && g.player;
+    if (!pl || root.hidden) return;
+    // facing r: r=π → screen up; CSS rotate is clockwise, so rotate(-(r-π)).
+    const deg = (-(currentHeading(pl) - Math.PI) * 180) / Math.PI;
+    headingEl.style.transform = `rotate(${deg.toFixed(1)}deg)`;
+    headingEl.dataset.vehicle = pl.inVehicle ? '1' : '0';
+  }
+
   (function loop() {
     stickTick();
+    updateHeadingIndicator();
     requestAnimationFrame(loop);
   })();
 

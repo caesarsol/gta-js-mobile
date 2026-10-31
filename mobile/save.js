@@ -10,15 +10,16 @@
  *   alive (no mission peds, timers, kill frenzy, pending vehicles) and the
  *   startup phase has finished; otherwise the save is player-only and says so.
  *
- * Slots: "manual" (SAVE/LOAD pills) and "auto" (every AUTOSAVE_MS and when the
- * tab is hidden). Saves are keyed by the bundle hash so a re-mirrored build
- * never loads an incompatible snapshot.
+ * Slots: "manual" (SAVE pill) and "auto" (written when the tab is hidden /
+ * the page is left). On the first start of each page load, the most recent
+ * slot is loaded automatically. The LOAD menu lists both slots plus "New game"
+ * (clears the slots and restarts). Saves are keyed by the bundle hash so a
+ * re-mirrored build never loads an incompatible snapshot.
  */
 (() => {
   'use strict';
 
   const VERSION = 1;
-  const AUTOSAVE_MS = 30000;
   const PREFIX = 'gtajs-mobile-save:';
   const BUILD = (() => {
     const s = document.querySelector('script[src*="play-"]');
@@ -257,6 +258,19 @@
       return false;
     }
   }
+  function clearSlots() {
+    for (const slot of ['manual', 'auto']) {
+      try { localStorage.removeItem(slotKey(slot)); } catch { /* ignore */ }
+    }
+  }
+  function latestSlot() {
+    const auto = readSlot('auto');
+    const manual = readSlot('manual');
+    if (!auto && !manual) return null;
+    if (!auto) return 'manual';
+    if (!manual) return 'auto';
+    return auto.ts >= manual.ts ? 'auto' : 'manual';
+  }
 
   function save(slot) {
     if (!canSave()) return null;
@@ -298,6 +312,10 @@
     <div id="gtaLoadMenu" hidden>
       <div class="gta-loadmenu-title">Load game</div>
       <div class="gta-loadmenu-rows"></div>
+      <div class="gta-loadmenu-row">
+        <div class="gta-loadmenu-info"><strong>New game</strong><small>Clears both slots and restarts from the beginning</small></div>
+        <button type="button" class="gta-loadmenu-btn gta-loadmenu-btn-danger" id="gtaNewGame">Reset</button>
+      </div>
       <button type="button" class="gta-loadmenu-cancel">Cancel</button>
     </div>
   `;
@@ -353,13 +371,37 @@
     const d = new Date(ts);
     return d.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   }
+  // "New game" needs a second tap within 3s to confirm.
+  const newGameBtn = menu.querySelector('#gtaNewGame');
+  let newGameArmed = 0;
+  onTap(newGameBtn, () => {
+    if (Date.now() - newGameArmed < 3000) {
+      newGameArmed = 0;
+      newGameBtn.textContent = 'Reset';
+      menu.hidden = true;
+      clearSlots();
+      const g = game();
+      if (g && typeof g.restartGame === 'function') g.restartGame();
+      toast('New game started');
+      return;
+    }
+    newGameArmed = Date.now();
+    newGameBtn.textContent = 'Tap again to confirm';
+    setTimeout(() => {
+      if (newGameArmed && Date.now() - newGameArmed >= 3000) {
+        newGameArmed = 0;
+        newGameBtn.textContent = 'Reset';
+      }
+    }, 3100);
+  });
+
   function openLoadMenu() {
     rows.innerHTML = '';
-    let any = false;
+    newGameArmed = 0;
+    newGameBtn.textContent = 'Reset';
     for (const slot of ['manual', 'auto']) {
       const d = readSlot(slot);
       if (!d) continue;
-      any = true;
       const row = document.createElement('div');
       row.className = 'gta-loadmenu-row';
       row.innerHTML = `
@@ -371,30 +413,25 @@
       onTap(row.querySelector('.gta-loadmenu-btn-alt'), () => { menu.hidden = true; load(slot, true); });
       rows.appendChild(row);
     }
-    if (!any) return toast('No saved games yet');
     menu.hidden = false;
   }
 
-  // ---------- Autosave + resume prompt ----------
-  let resumeOffered = false;
-  setInterval(() => {
+  // ---------- Autosave on leave + auto-load on first start ----------
+  let autoLoaded = false;
+  const startWatch = setInterval(() => {
     if (!canSave()) return;
-    if (!resumeOffered) {
-      resumeOffered = true;
-      const auto = readSlot('auto');
-      const manual = readSlot('manual');
-      const best = [auto, manual].filter(Boolean).sort((a, b) => b.ts - a.ts)[0];
-      if (best) {
-        const slot = best === auto ? 'auto' : 'manual';
-        toast(`Resume ${slot === 'auto' ? 'autosave' : 'save'} from ${fmt(best.ts)}?`, 12000, { label: 'Resume', fn: () => load(slot, false) });
-        return; // don't overwrite the autosave before the player decides
-      }
-    }
-    save('auto');
-  }, AUTOSAVE_MS);
-  const onHide = () => { if (canSave() && resumeOffered) save('auto'); };
+    clearInterval(startWatch);
+    autoLoaded = true;
+    const slot = latestSlot();
+    if (!slot) return;
+    const d = readSlot(slot);
+    load(slot, false);
+    toast(`Resumed ${slot === 'auto' ? 'autosave' : 'save'} from ${fmt(d.ts)}`, 4000);
+  }, 250);
+
+  const onHide = () => { if (autoLoaded && canSave()) save('auto'); };
   document.addEventListener('visibilitychange', () => { if (document.hidden) onHide(); });
   window.addEventListener('pagehide', onHide);
 
-  window.gtaSave = { save, load, snapshot, readSlot, canSave, missionIsQuiet: () => missionIsQuiet(game() && game().missionEngine) };
+  window.gtaSave = { save, load, snapshot, readSlot, clearSlots, latestSlot, canSave, missionIsQuiet: () => missionIsQuiet(game() && game().missionEngine) };
 })();

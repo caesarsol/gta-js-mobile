@@ -18,6 +18,7 @@ Personal, unlisted test bed for adding **touch controls** to [GTA.js](https://gt
 | `index.html` | The `/play` page from gtajs.wtf with relative asset paths + our overlay |
 | `assets/` | Mirrored build (`play-*.js`, `play-*.css`, polyfill, screenshot) |
 | `sw.js` | Mirrored service worker (serves cached game data) |
+| `mobile/boot.js` | Cache-busting loader: loads our files with `?v=<timestamp>`, shows a version label and a ↻ pill |
 | `mobile/mobile.js`, `mobile/mobile.css` | **Our touch overlay** |
 | `mobile/save.js` | **Save / load** (manual slot + autosave, see below) |
 | `scripts/mirror.sh` | Re-mirror the latest build from gtajs.wtf and update `index.html` |
@@ -33,10 +34,12 @@ The game reads input only through `keydown`/`keyup` on `document`, keyed by `eve
   want to go on screen; a per-frame controller reads the heading from `window.game` and
   presses ←/→ until the character/car faces that way (steering sign is flipped while a car
   is reversing, as the engine does). Distance from the center picks the speed:
-  `< 20px` idle · `20–90px` walk/drive · `> 90px` run. **Reverse is by direction, not
-  distance**: if the stick points behind the current facing (beyond 130°, with hysteresis
-  back to 100°) you back up toward it instead of U-turning; the knob turns red while
-  reversing. Thresholds are constants at the top of `mobile.js`.
+  `< 20px` idle · `20–90px` walk/drive · `> 90px` run. A yellow arrow on the base shows
+  the current facing. **Reverse exists only in vehicles** and is by direction, not
+  distance: if the stick points into the dashed sector behind the car (beyond 130°, with
+  hysteresis back to 100°) you back up toward it instead of U-turning; the knob turns red
+  while reversing. On foot you always turn and walk forward. Thresholds are constants at
+  the top of `mobile.js`.
 - **Right**: FIRE, ENTER/EXIT, JUMP/BRAKE.
 - **Top**: weapon prev/next, `?` menu, fullscreen (+ landscape lock where supported).
 - Hidden automatically while the intro/options dialog is open or on game over.
@@ -45,7 +48,9 @@ The game reads input only through `keydown`/`keyup` on `document`, keyed by `eve
 ## Save / load
 
 Userspace, through `window.game` — the bundle is not patched. Pills **SAVE** / **LOAD**
-top-left; autosave every 30 s and when the tab is hidden; a "Resume?" toast on start.
+top-left. Autosave when the tab goes to the background / the page is left; on the first
+start of each page load the most recent slot is loaded automatically. The LOAD menu lists
+both slots and a **New game** entry (two taps: clears the slots and restarts).
 
 - **Always**: position + heading, weapons/ammo, score/lives/multiplier/armor/jail key/
   wanted level, vehicle model if driving (respawned next to you; you load on foot).

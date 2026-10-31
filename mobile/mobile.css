@@ -95,6 +95,61 @@ canvas {
 #gtaStick[data-mode='rev'] #gtaStickKnob {
   background: rgba(255, 90, 60, 0.9);
 }
+
+/* Heading indicator: rotated by mobile.js to the current facing (0deg = up).
+   The arrow sits at the top edge; the reverse sector (vehicles only) spans
+   130°–230°, i.e. ±50° around "behind", matching REV_ENTER. */
+#gtaHeading {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
+}
+.gta-heading-arrow {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  width: 0;
+  height: 0;
+  margin-left: -9px;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 16px solid #ffc400;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+}
+.gta-rev-sector,
+.gta-rev-line {
+  display: none;
+}
+#gtaHeading[data-vehicle='1'] .gta-rev-sector,
+#gtaHeading[data-vehicle='1'] .gta-rev-line {
+  display: block;
+}
+.gta-rev-sector {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 130deg, rgba(255, 90, 60, 0.16) 0 100deg, transparent 100deg 360deg);
+}
+.gta-rev-line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 50%;
+  border-left: 2px dashed rgba(255, 90, 60, 0.85);
+  transform-origin: top center;
+}
+.gta-rev-line-a {
+  transform: rotate(-130deg);
+}
+.gta-rev-line-b {
+  transform: rotate(130deg);
+}
+#gtaStick[data-mode='rev'] .gta-rev-sector {
+  background: conic-gradient(from 130deg, rgba(255, 90, 60, 0.32) 0 100deg, transparent 100deg 360deg);
+}
 #gtaStickKnob {
   position: absolute;
   left: 50%;
@@ -197,6 +252,25 @@ canvas {
   transform: translateX(calc(-50% + 64px));
 }
 
+/* ---- boot.js: version label + reload pill ---- */
+#gtaVersion {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left));
+  top: calc(max(8px, env(safe-area-inset-top)) + 38px);
+  z-index: 1001;
+  color: rgba(255, 255, 255, 0.55);
+  font: 10px/1 ui-monospace, Menlo, Consolas, monospace;
+  pointer-events: none;
+}
+#gtaReload {
+  position: fixed;
+  z-index: 1001;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(calc(-50% + 128px));
+  font-size: 16px;
+}
+
 /* ---- Save / load (save.js) ---- */
 #gtaSaveBtn {
   left: var(--pad-l);
@@ -241,6 +315,11 @@ canvas {
 .gta-loadmenu-cancel {
   background: transparent;
   color: #ffc400;
+}
+.gta-loadmenu-btn-danger {
+  background: transparent;
+  color: #ff5a3c;
+  border-color: #ff5a3c;
 }
 #gtaToastAction.is-down,
 .gta-loadmenu-btn.is-down,
