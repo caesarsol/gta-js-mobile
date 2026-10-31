@@ -101,7 +101,44 @@
   if (document.body) mount();
   else document.addEventListener('DOMContentLoaded', mount);
 
-  root.addEventListener('contextmenu', (e) => e.preventDefault());
+  // ---------- Touch hardening ----------
+  // Browsers turn touches into gestures we never want in a game: long-press
+  // (context menu / iOS callout / text selection), double-tap zoom, pinch
+  // zoom, pull-to-refresh, text-selection drag. CSS (touch-action, user-select,
+  // touch-callout) covers most of it; the rest needs non-passive listeners.
+  // Form controls inside the game's <dialog>s are left alone so the options
+  // panel still works.
+  const isFormControl = (t) =>
+    !!t && !!t.closest && !!t.closest('input, textarea, select, label, a, dialog');
+  const isGameSurface = (t) =>
+    !!t && !!t.closest && (t.tagName === 'CANVAS' || !!t.closest('#gtaMobile'));
+
+  document.addEventListener('contextmenu', (e) => {
+    if (!isFormControl(e.target)) e.preventDefault();
+  });
+  document.addEventListener('selectstart', (e) => {
+    if (!isFormControl(e.target)) e.preventDefault();
+  });
+  document.addEventListener('dblclick', (e) => {
+    if (!isFormControl(e.target)) e.preventDefault();
+  });
+  // Cancelling touchstart on the game surface suppresses the long-press
+  // callout, double-tap zoom and the synthesised click; pointer events keep
+  // firing, which is all the overlay and the game use.
+  const touchOpts = { passive: false, capture: true };
+  for (const type of ['touchstart', 'touchmove', 'touchend']) {
+    document.addEventListener(
+      type,
+      (e) => {
+        if (isGameSurface(e.target) && !isFormControl(e.target)) e.preventDefault();
+      },
+      touchOpts
+    );
+  }
+  // iOS pinch-zoom gestures
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+    document.addEventListener(type, (e) => e.preventDefault(), touchOpts);
+  }
 
   // ---------- Buttons (hold) ----------
   for (const btn of root.querySelectorAll('[data-key]')) {
@@ -138,19 +175,21 @@
   }
 
   // ---------- Pills (tap) ----------
-  // Fired on `click`, not `pointerdown`: the game's <dialog closedby="any">
-  // light-dismisses on the click that follows a pointerdown outside it, so
-  // toggling the menu on pointerdown would open and immediately close it.
+  // Fired on pointerup, deferred one task: the game's <dialog closedby="any">
+  // light-dismisses on a pointer sequence / click that ends outside it, so
+  // toggling the menu synchronously would open and immediately close it.
+  // (No `click` here: touchstart is cancelled above, so none is synthesised.)
   for (const btn of root.querySelectorAll('[data-tap]')) {
     const code = btn.dataset.tap;
     btn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       btn.classList.add('is-down');
     });
-    const up = () => btn.classList.remove('is-down');
-    btn.addEventListener('pointerup', up);
-    btn.addEventListener('pointercancel', up);
-    btn.addEventListener('click', () => tap(code));
+    btn.addEventListener('pointerup', () => {
+      btn.classList.remove('is-down');
+      setTimeout(() => tap(code), 0);
+    });
+    btn.addEventListener('pointercancel', () => btn.classList.remove('is-down'));
   }
 
   // ---------- Fullscreen + orientation ----------
