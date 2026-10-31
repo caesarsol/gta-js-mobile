@@ -7,7 +7,7 @@
 (() => {
   'use strict';
   const v = Date.now();
-  const FILES = ['mobile/mobile.css', 'mobile/mobile.js', 'mobile/save.js'];
+  const FILES = ['mobile/mobile.css', 'mobile/mobile.js', 'mobile/save.js', 'mobile/autostart.js'];
 
   const css = document.createElement('link');
   css.rel = 'stylesheet';

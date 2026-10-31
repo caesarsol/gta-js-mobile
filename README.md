@@ -21,6 +21,7 @@ Personal, unlisted test bed for adding **touch controls** to [GTA.js](https://gt
 | `mobile/boot.js` | Cache-busting loader: loads our files with `?v=<timestamp>`, shows a version label and a ↻ pill |
 | `mobile/mobile.js`, `mobile/mobile.css` | **Our touch overlay** |
 | `mobile/save.js` | **Save / load** (manual slot + autosave, see below) |
+| `mobile/autostart.js` | Skips the intro dialog: downloads the demo ZIP if not cached, then presses PLAY |
 | `scripts/mirror.sh` | Re-mirror the latest build from gtajs.wtf and update `index.html` |
 
 ## How the overlay works
