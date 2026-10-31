@@ -259,7 +259,7 @@ canvas {
 #gtaWeapons {
   position: absolute;
   right: var(--pad-r);
-  top: calc(var(--pad-t) + 52px);
+  top: var(--pad-t);
   display: flex;
   flex-direction: column;
   align-items: flex-end;

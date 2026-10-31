@@ -391,7 +391,7 @@
   // value once it moves, so handling at speed is untouched.
   const PIVOT_ON_BELOW = 20; // |vehicleSpeed| below this → pivot enabled
   const PIVOT_OFF_ABOVE = 35; // … above this → original handling restored
-  const PIVOT_SENS_SCALE = 0.5; // pivot yaw = steeringSensitivity × 0.75 at standstill; scale it down
+  const PIVOT_SENS_SCALE = 1.0; // pivot yaw = steeringSensitivity × 0.75 at standstill (~147°/s for a typical car)
   const PIVOT_KEY = 'gtajs-mobile:pivot';
   let pivotEnabled = (() => {
     if (location.search.includes('nopivot')) return false;
