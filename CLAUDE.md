@@ -12,6 +12,8 @@ https://caesarsol.github.io/gta-js-mobile/ (GitHub Pages from `main`).
   then edits.
 - Every step: verify in headless Chromium, **commit and push to `main`**. The user tests on a
   real phone right after.
+- **One commit per logical change.** When a message asks for several things, make a separate
+  commit for each (feature, fix, docs, revert…), never one bundled commit.
 - Chat in Italian; code, comments, commit messages and docs in English.
 - The branch is `main`. Do not create `claude/*` branches.
 
