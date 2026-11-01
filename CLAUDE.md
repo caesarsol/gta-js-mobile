@@ -14,6 +14,11 @@ https://caesarsol.github.io/gta-js-mobile/ (GitHub Pages from `main`).
   real phone right after.
 - **One commit per logical change.** When a message asks for several things, make a separate
   commit for each (feature, fix, docs, revert…), never one bundled commit.
+- **Squash calibration commits.** Consecutive (or nearly consecutive) commits that keep
+  adjusting the *same* feature (tuning a value, fixing the change just pushed) belong in the
+  previous commit: `git commit --amend` (last commit) or `git commit --fixup=<sha>` +
+  `git rebase -i --autosquash` (older one), then `git push --force-with-lease origin main`.
+  A new logical change is still its own commit.
 - Chat in Italian; code, comments, commit messages and docs in English.
 - The branch is `main`. Do not create `claude/*` branches.
 
